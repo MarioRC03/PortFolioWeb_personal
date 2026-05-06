@@ -1,0 +1,3408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>M.R.C // ctOS_INTRUSION</title>
+<meta name="description" content="Mario Rodríguez Carbonero — Full-Stack Developer & Ethical Hacker.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=VT323&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #050608;
+  --bg-deep: #000000;
+  --surface: #0a0d12;
+  --surface-hi: #131820;
+  --green: #00ff41;
+  --green-bright: #14ff72;
+  --green-dim: #00802a;
+  --green-faint: rgba(0, 255, 65, 0.15);
+  --cyan: #00f0ff;
+  --cyan-dim: #007a85;
+  --amber: #ff9500;
+  --amber-bright: #ffb340;
+  --red: #ff003c;
+  --red-bright: #ff2d5e;
+  --text: #d8e0e6;
+  --text-dim: #6a7280;
+  --text-faint: #3a4048;
+
+  --f-display: 'Chakra Petch', sans-serif;
+  --f-mono: 'JetBrains Mono', monospace;
+  --f-crt: 'VT323', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+::selection { background: var(--green); color: var(--bg-deep); }
+
+html { scroll-behavior: smooth; background: var(--bg); }
+
+body {
+  font-family: var(--f-mono);
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  cursor: none;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+}
+
+/* ============================================
+   CRT SCANLINES + VIGNETTE
+   ============================================ */
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9990;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 65, 0.025) 0px,
+    rgba(0, 255, 65, 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: overlay;
+}
+
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 255, 65, 0.03) 50%,
+    transparent 100%
+  );
+  background-size: 100% 8px;
+  animation: scanMove 8s linear infinite;
+}
+
+@keyframes scanMove {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100vh; }
+}
+
+.vignette {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9989;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+}
+
+.crt-flicker {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9991;
+  background: rgba(0, 255, 65, 0.02);
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.96; }
+}
+
+/* ============================================
+   GRID BACKGROUND
+   ============================================ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 255, 65, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 65, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ============================================
+   CUSTOM CURSOR — CROSSHAIR
+   ============================================ */
+.cursor {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  width: 30px;
+  height: 30px;
+  transform: translate(-50%, -50%);
+  transition: width 0.2s, height 0.2s;
+  mix-blend-mode: difference;
+}
+
+.cursor::before, .cursor::after {
+  content: '';
+  position: absolute;
+  background: var(--green);
+}
+
+.cursor::before {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
+  transform: translateX(-50%);
+}
+
+.cursor::after {
+  top: 50%;
+  left: 0;
+  height: 1px;
+  width: 100%;
+  transform: translateY(-50%);
+}
+
+.cursor-dot {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  width: 4px;
+  height: 4px;
+  background: var(--green);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px var(--green);
+}
+
+.cursor.hover {
+  width: 50px;
+  height: 50px;
+}
+
+@media (max-width: 768px) {
+  body { cursor: auto; }
+  .cursor, .cursor-dot { display: none; }
+}
+
+/* ============================================
+   BOOT SEQUENCE LOADER
+   ============================================ */
+.boot {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--bg-deep);
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: var(--green);
+  transition: opacity 0.5s, visibility 0.5s;
+}
+
+.boot.hidden { opacity: 0; visibility: hidden; }
+
+.boot-line { opacity: 0; }
+
+.boot-line.show { opacity: 1; }
+
+.boot-line .ok { color: var(--green-bright); }
+.boot-line .warn { color: var(--amber); }
+.boot-line .err { color: var(--red); }
+
+.boot-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  background: var(--green);
+  vertical-align: text-bottom;
+  animation: blink 0.5s steps(1) infinite;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+@media (max-width: 768px) {
+  .boot { font-size: 0.7rem; padding: 1.5rem; }
+}
+
+/* ============================================
+   3D NETWORK CANVAS
+   ============================================ */
+#bg-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+#matrix-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* ============================================
+   SURVEILLANCE HUD
+   ============================================ */
+.hud {
+  position: fixed;
+  z-index: 50;
+  font-family: var(--f-mono);
+  font-size: 0.65rem;
+  color: var(--green);
+  letter-spacing: 0.15em;
+  pointer-events: none;
+  text-transform: uppercase;
+}
+
+.hud-tl { top: 4.5rem; left: 1.5rem; }
+.hud-tr { top: 4.5rem; right: 1.5rem; text-align: right; }
+.hud-bl { bottom: 1.5rem; left: 1.5rem; }
+.hud-br { bottom: 1.5rem; right: 1.5rem; text-align: right; }
+
+.hud-line { display: block; margin-bottom: 0.2rem; opacity: 0.7; }
+.hud-line .v { color: var(--cyan); }
+.hud-line .red { color: var(--red); }
+
+.rec-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: recBlink 1s ease-in-out infinite;
+  vertical-align: middle;
+  margin-right: 0.4rem;
+}
+
+@keyframes recBlink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--red); }
+  50% { opacity: 0.3; box-shadow: 0 0 0 transparent; }
+}
+
+@media (max-width: 768px) {
+  .hud-bl, .hud-tr { display: none; }
+  .hud { font-size: 0.55rem; }
+}
+
+/* ============================================
+   NAV
+   ============================================ */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--f-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg, rgba(5,6,8,0.95) 0%, rgba(5,6,8,0.6) 70%, transparent 100%);
+  backdrop-filter: blur(4px);
+  border-bottom: 1px solid rgba(0, 255, 65, 0.1);
+}
+
+.nav-logo {
+  color: var(--green);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.nav-logo::before {
+  content: '> ';
+  color: var(--green);
+}
+
+.nav-logo .blink {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  background: var(--green);
+  margin-left: 0.3em;
+  animation: blink 0.7s steps(1) infinite;
+  vertical-align: text-bottom;
+}
+
+.nav-links { display: flex; gap: 1.8rem; list-style: none; }
+
+.nav-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+  position: relative;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.nav-links a::before {
+  content: '[';
+  color: var(--green-dim);
+  transition: color 0.2s;
+}
+
+.nav-links a::after {
+  content: ']';
+  color: var(--green-dim);
+  transition: color 0.2s;
+}
+
+.nav-links a:hover { color: var(--green); }
+.nav-links a:hover::before, .nav-links a:hover::after { color: var(--green-bright); }
+
+@media (max-width: 968px) {
+  .nav-links { display: none; }
+}
+
+/* ============================================
+   HERO
+   ============================================ */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 4rem;
+  z-index: 5;
+}
+
+.hero-prefix {
+  font-family: var(--f-mono);
+  font-size: 0.75rem;
+  color: var(--green-bright);
+  letter-spacing: 0.3em;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: fadeIn 0.6s ease 0.2s forwards;
+}
+
+.hero-prefix::before {
+  content: '> ';
+  color: var(--green);
+}
+
+.hero-prefix .err {
+  color: var(--red);
+  animation: textGlitch 4s infinite;
+}
+
+.hero-title {
+  font-family: var(--f-display);
+  font-weight: 700;
+  font-size: clamp(3rem, 11vw, 11rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  position: relative;
+  text-transform: uppercase;
+  margin-bottom: 0.3em;
+}
+
+.hero-title-row {
+  display: block;
+  position: relative;
+}
+
+.hero-title .glitch {
+  position: relative;
+  display: inline-block;
+}
+
+.hero-title .glitch::before,
+.hero-title .glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hero-title .glitch::before {
+  color: var(--cyan);
+  animation: glitchTop 3.5s infinite linear alternate-reverse;
+  clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+  opacity: 0.7;
+  mix-blend-mode: screen;
+}
+
+.hero-title .glitch::after {
+  color: var(--red-bright);
+  animation: glitchBot 4s infinite linear alternate-reverse;
+  clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+  opacity: 0.7;
+  mix-blend-mode: screen;
+}
+
+@keyframes glitchTop {
+  0%, 92%, 100% { transform: translate(0, 0); }
+  93% { transform: translate(-3px, -1px); }
+  95% { transform: translate(3px, 1px); }
+  97% { transform: translate(-2px, 0); }
+  99% { transform: translate(2px, 1px); }
+}
+
+@keyframes glitchBot {
+  0%, 90%, 100% { transform: translate(0, 0); }
+  91% { transform: translate(2px, 1px); }
+  93% { transform: translate(-2px, -1px); }
+  96% { transform: translate(3px, 0); }
+}
+
+@keyframes textGlitch {
+  0%, 96%, 100% { transform: translate(0, 0); opacity: 1; }
+  97% { transform: translate(-1px, 1px); opacity: 0.8; }
+  98% { transform: translate(1px, -1px); opacity: 0.9; }
+  99% { transform: translate(-1px, 0); opacity: 0.7; }
+}
+
+.hero-title .accent { color: var(--green); }
+
+.hero-sub {
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-top: 1.5rem;
+  max-width: 700px;
+  line-height: 2;
+  opacity: 0;
+  animation: fadeIn 0.8s ease 1.5s forwards;
+}
+
+.hero-sub .tag {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--green);
+  color: var(--green);
+  margin: 0 0.25rem;
+  font-size: 0.7rem;
+}
+
+.hero-sub .tag.amber {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.hero-sub .tag.cyan {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+@keyframes fadeIn { to { opacity: 1; } }
+
+.hero-status {
+  position: absolute;
+  top: 50%;
+  right: 4rem;
+  transform: translateY(-50%);
+  font-family: var(--f-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-align: right;
+  color: var(--text-dim);
+  opacity: 0;
+  animation: fadeIn 0.8s ease 2s forwards;
+  border-left: 1px solid var(--green-dim);
+  padding-left: 1.5rem;
+}
+
+.hero-status-row {
+  margin-bottom: 0.6rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.hero-status-row .label { color: var(--text-faint); min-width: 100px; text-align: left; }
+.hero-status-row .val { color: var(--green); }
+.hero-status-row .val.amber { color: var(--amber); }
+.hero-status-row .val.cyan { color: var(--cyan); }
+
+@media (max-width: 1100px) {
+  .hero-status { display: none; }
+}
+
+@media (max-width: 768px) {
+  .hero { padding: 0 1.5rem; }
+}
+
+.hero-scroll {
+  position: absolute;
+  bottom: 5rem;
+  left: 4rem;
+  font-family: var(--f-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.4em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  opacity: 0;
+  animation: fadeIn 1s ease 2.5s forwards;
+}
+
+.hero-scroll::after {
+  content: '';
+  width: 30px;
+  height: 1px;
+  background: var(--green);
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+@keyframes scrollPulse {
+  0%, 100% { transform: scaleX(0.3); transform-origin: left; opacity: 0.5; }
+  50% { transform: scaleX(1); transform-origin: left; opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .hero-scroll { left: 1.5rem; bottom: 3rem; }
+}
+
+/* ============================================
+   SECTIONS
+   ============================================ */
+section {
+  position: relative;
+  padding: 8rem 4rem;
+  z-index: 5;
+}
+
+@media (max-width: 768px) {
+  section { padding: 5rem 1.5rem; }
+}
+
+.section-header {
+  margin-bottom: 4rem;
+  display: flex;
+  align-items: baseline;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.section-tag {
+  font-family: var(--f-mono);
+  font-size: 0.75rem;
+  color: var(--green);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.section-tag::before { content: '// '; color: var(--green-dim); }
+
+.section-title {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.section-title .accent { color: var(--green); }
+.section-title .underline { 
+  position: relative;
+  display: inline-block;
+}
+.section-title .underline::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  bottom: -4px;
+  height: 3px;
+  background: var(--green);
+  box-shadow: 0 0 15px var(--green);
+}
+
+.section-divider {
+  position: absolute;
+  top: 0; left: 4rem; right: 4rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--green-dim) 30%, var(--green) 50%, var(--green-dim) 70%, transparent 100%);
+  opacity: 0.5;
+}
+
+.section-divider::before {
+  content: '◢';
+  position: absolute;
+  left: 0;
+  top: -8px;
+  color: var(--green);
+  font-size: 0.8rem;
+}
+
+.section-divider::after {
+  content: '◣';
+  position: absolute;
+  right: 0;
+  top: -8px;
+  color: var(--green);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 768px) {
+  .section-divider { left: 1.5rem; right: 1.5rem; }
+}
+
+/* ============================================
+   PERFIL — TARGET DOSSIER
+   ============================================ */
+.perfil-grid {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 4rem;
+  align-items: start;
+}
+
+@media (max-width: 968px) {
+  .perfil-grid { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+.dossier {
+  background: var(--surface);
+  border: 1px solid var(--green-dim);
+  padding: 1.5rem;
+  font-family: var(--f-mono);
+  font-size: 0.75rem;
+  position: relative;
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.1);
+}
+
+.dossier::before {
+  content: 'CLASIFICADO';
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  background: var(--red);
+  color: white;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+
+.dossier-header {
+  border-bottom: 1px solid var(--green-dim);
+  padding-bottom: 0.8rem;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.7rem;
+  color: var(--green);
+}
+
+.dossier-asciiportrait {
+  font-family: var(--f-mono);
+  font-size: 0.55rem;
+  line-height: 1;
+  color: var(--green);
+  white-space: pre;
+  margin: 1rem 0;
+  padding: 0.8rem;
+  background: var(--bg-deep);
+  border: 1px solid var(--green-dim);
+  text-align: center;
+  letter-spacing: 0;
+}
+
+.dossier-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed rgba(0, 255, 65, 0.15);
+}
+
+.dossier-row:last-child { border-bottom: none; }
+
+.dossier-key {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.65rem;
+}
+
+.dossier-val {
+  color: var(--green);
+  text-align: right;
+  font-weight: 500;
+  font-size: 0.7rem;
+}
+
+.dossier-val.amber { color: var(--amber); }
+.dossier-val.cyan { color: var(--cyan); }
+
+.threat-bar {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.threat-bar span {
+  width: 8px;
+  height: 12px;
+  background: var(--green-dim);
+}
+
+.threat-bar span.on { background: var(--green); box-shadow: 0 0 4px var(--green); }
+.threat-bar.amber span.on { background: var(--amber); box-shadow: 0 0 4px var(--amber); }
+
+.dossier-footer {
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--green-dim);
+  font-size: 0.6rem;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  display: flex;
+  justify-content: space-between;
+}
+
+.bio {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.bio-block {
+  border-left: 2px solid var(--green-dim);
+  padding-left: 1.5rem;
+  position: relative;
+}
+
+.bio-block::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green);
+}
+
+.bio-block h4 {
+  font-family: var(--f-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  color: var(--green);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.bio-block h4::before { content: '> '; color: var(--green-dim); }
+
+.bio-block p {
+  font-family: var(--f-mono);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--text);
+  margin-bottom: 0.8rem;
+}
+
+.bio-block p em {
+  color: var(--cyan);
+  font-style: normal;
+  font-weight: 500;
+  border-bottom: 1px dotted var(--cyan-dim);
+}
+
+.bio-block p strong {
+  color: var(--amber);
+  font-weight: 500;
+}
+
+/* ============================================
+   CAPABILITIES — DEV / SEC
+   ============================================ */
+.cap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 968px) {
+  .cap-grid { grid-template-columns: 1fr; }
+}
+
+.cap-panel {
+  background: var(--surface);
+  border: 1px solid var(--green-dim);
+  padding: 2rem;
+  position: relative;
+  font-family: var(--f-mono);
+}
+
+.cap-panel.sec { border-color: var(--amber); }
+
+.cap-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--green-dim);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+
+.cap-panel.sec .cap-panel-header { border-color: var(--amber); }
+
+.cap-mode {
+  color: var(--green);
+  font-weight: 700;
+}
+
+.cap-panel.sec .cap-mode { color: var(--amber); }
+
+.cap-mode::before { content: '['; }
+.cap-mode::after { content: ']'; }
+
+.cap-status {
+  color: var(--text-dim);
+  font-size: 0.65rem;
+}
+
+.cap-status .dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  margin-right: 0.4rem;
+  animation: pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--green);
+}
+
+.cap-panel.sec .cap-status .dot {
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.skill-row {
+  margin-bottom: 1.2rem;
+}
+
+.skill-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.skill-name {
+  color: var(--text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.skill-level {
+  color: var(--green);
+  font-size: 0.7rem;
+}
+
+.cap-panel.sec .skill-level { color: var(--amber); }
+
+.skill-bar {
+  height: 4px;
+  background: rgba(0, 255, 65, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.cap-panel.sec .skill-bar { background: rgba(255, 149, 0, 0.1); }
+
+.skill-bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  width: 0;
+  transition: width 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cap-panel.sec .skill-bar-fill {
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber);
+}
+
+.skill-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  bottom: 0;
+  width: 2px;
+  background: white;
+  opacity: 0.8;
+  animation: skillScan 2s ease-in-out infinite;
+}
+
+@keyframes skillScan {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ============================================
+   STACK — TERMINAL OUTPUT
+   ============================================ */
+.terminal-stack {
+  background: var(--bg-deep);
+  border: 1px solid var(--green-dim);
+  padding: 0;
+  font-family: var(--f-mono);
+  position: relative;
+  box-shadow: 0 0 40px rgba(0, 255, 65, 0.08);
+}
+
+.terminal-bar {
+  background: var(--surface-hi);
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--green-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.terminal-bar .dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+}
+
+.terminal-bar .dot.r { background: var(--red); }
+.terminal-bar .dot.y { background: var(--amber); }
+.terminal-bar .dot.g { background: var(--green); }
+
+.terminal-bar .title {
+  margin-left: 1rem;
+}
+
+.terminal-body {
+  padding: 1.5rem;
+  font-size: 0.78rem;
+  line-height: 1.8;
+  min-height: 400px;
+}
+
+.term-line { display: block; margin-bottom: 0.2rem; }
+.term-line .prompt { color: var(--green); }
+.term-line .out { color: var(--text); }
+.term-line .ok { color: var(--green-bright); }
+.term-line .arrow { color: var(--green); margin: 0 0.5rem; }
+.term-line .dim { color: var(--text-dim); }
+.term-line .amber { color: var(--amber); }
+.term-line .cyan { color: var(--cyan); }
+.term-line .red { color: var(--red); }
+
+/* ============================================
+   OPERATIONS — MISSION FILES
+   ============================================ */
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.5rem;
+}
+
+.op-card {
+  background: var(--surface);
+  border: 1px solid var(--green-dim);
+  padding: 0;
+  font-family: var(--f-mono);
+  cursor: none;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s;
+}
+
+.op-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--green);
+  box-shadow: 0 10px 40px -10px rgba(0, 255, 65, 0.3);
+}
+
+.op-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent);
+  transition: left 0.6s ease;
+}
+
+.op-card:hover::before { left: 100%; }
+
+.op-header {
+  background: var(--surface-hi);
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--green-dim);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.op-id { color: var(--green); }
+.op-status { color: var(--green); }
+.op-status.amber { color: var(--amber); }
+.op-status.dim { color: var(--text-dim); }
+
+.op-status::before {
+  content: '●';
+  margin-right: 0.3em;
+}
+
+.op-body { padding: 1.5rem; }
+
+.op-codename {
+  font-family: var(--f-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.op-codename .accent { color: var(--green); }
+
+.op-type {
+  font-size: 0.65rem;
+  color: var(--amber);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.op-desc {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+  min-height: 5em;
+}
+
+.op-tech {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-top: 1rem;
+  border-top: 1px dashed rgba(0, 255, 65, 0.2);
+}
+
+.op-tech span {
+  font-size: 0.6rem;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--green-dim);
+  color: var(--green);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* ============================================
+   INTERACTIVE TERMINAL
+   ============================================ */
+.live-terminal {
+  background: var(--bg-deep);
+  border: 1px solid var(--green);
+  font-family: var(--f-mono);
+  box-shadow: 0 0 50px rgba(0, 255, 65, 0.15);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.live-term-bar {
+  background: var(--surface-hi);
+  padding: 0.6rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--green-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  justify-content: space-between;
+}
+
+.live-term-bar .left {
+  display: flex; gap: 0.5rem; align-items: center;
+}
+
+.live-term-bar .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.live-term-bar .dot.r { background: var(--red); }
+.live-term-bar .dot.y { background: var(--amber); }
+.live-term-bar .dot.g { background: var(--green); }
+
+.live-term-body {
+  padding: 1.5rem;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  min-height: 360px;
+  max-height: 420px;
+  overflow-y: auto;
+  color: var(--text);
+}
+
+.live-term-body::-webkit-scrollbar { width: 6px; }
+.live-term-body::-webkit-scrollbar-track { background: var(--surface); }
+.live-term-body::-webkit-scrollbar-thumb { background: var(--green-dim); }
+
+.term-out { white-space: pre-wrap; word-break: break-word; }
+.term-out .prompt { color: var(--green); font-weight: 700; }
+.term-out .ok { color: var(--green-bright); }
+.term-out .err { color: var(--red); }
+.term-out .amber { color: var(--amber); }
+.term-out .cyan { color: var(--cyan); }
+.term-out .dim { color: var(--text-dim); }
+
+.term-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.term-input-row .prompt {
+  color: var(--green);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#term-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  flex: 1;
+  caret-color: var(--green);
+}
+
+.term-hint {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.term-hint kbd {
+  background: var(--surface-hi);
+  border: 1px solid var(--green-dim);
+  padding: 0.1rem 0.4rem;
+  font-size: 0.65rem;
+  color: var(--green);
+  margin: 0 0.2rem;
+  font-family: var(--f-mono);
+}
+
+/* ============================================
+   CONTACT
+   ============================================ */
+.contact-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.contact-prompt {
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  color: var(--green);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.contact-prompt::before { content: '> '; }
+
+.contact-headline {
+  font-family: var(--f-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  margin-bottom: 2rem;
+}
+
+.contact-headline .accent { color: var(--green); }
+
+.contact-headline .blink {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.85em;
+  background: var(--green);
+  margin-left: 0.2em;
+  vertical-align: text-bottom;
+  animation: blink 0.6s steps(1) infinite;
+  box-shadow: 0 0 15px var(--green);
+}
+
+.contact-desc {
+  font-family: var(--f-mono);
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  line-height: 1.8;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+.contact-channels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.channel {
+  background: var(--surface);
+  border: 1px solid var(--green-dim);
+  padding: 1.2rem;
+  text-decoration: none;
+  font-family: var(--f-mono);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: none;
+  transition: border-color 0.3s, background 0.3s, transform 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.channel:hover {
+  border-color: var(--green);
+  background: rgba(0, 255, 65, 0.04);
+  transform: translateY(-3px);
+}
+
+.channel::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 0;
+  background: linear-gradient(0deg, var(--green-faint), transparent);
+  transition: height 0.4s ease;
+  pointer-events: none;
+}
+
+.channel:hover::after { height: 100%; }
+
+.channel-key {
+  font-size: 0.65rem;
+  color: var(--text-faint);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.channel-val {
+  font-size: 0.95rem;
+  color: var(--green);
+  letter-spacing: 0.05em;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+.footer {
+  padding: 3rem 4rem 2rem;
+  border-top: 1px solid var(--green-dim);
+  font-family: var(--f-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  position: relative;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 2rem;
+}
+
+.footer-mark {
+  color: var(--green);
+  font-family: var(--f-display);
+  font-size: 1rem;
+  letter-spacing: 0;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.footer-end { text-align: right; }
+.footer-end .v { color: var(--green); }
+
+@media (max-width: 768px) {
+  .footer { grid-template-columns: 1fr; padding: 2rem 1.5rem; }
+  .footer-end { text-align: left; }
+}
+
+/* ============================================
+   REVEAL
+   ============================================ */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ============================================
+   FLIP SWITCH (fixed bottom)
+   ============================================ */
+.flip-switch-wrap {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  font-family: var(--f-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  background: rgba(5, 6, 8, 0.7);
+  backdrop-filter: blur(6px);
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--green-dim);
+  border-radius: 30px;
+  user-select: none;
+}
+
+.flip-switch-wrap .flip-label {
+  transition: color 0.3s, text-shadow 0.3s;
+  cursor: none;
+}
+
+.flip-switch-wrap .flip-label.active {
+  color: var(--green);
+  text-shadow: 0 0 8px var(--green-faint);
+}
+
+.flip-switch {
+  width: 56px;
+  height: 26px;
+  background: var(--bg-deep);
+  border: 1px solid var(--green-dim);
+  border-radius: 13px;
+  position: relative;
+  cursor: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+  padding: 0;
+  margin: 0;
+}
+
+.flip-switch:hover {
+  border-color: var(--green);
+  box-shadow: 0 0 12px var(--green-faint);
+}
+
+.flip-switch::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  background: var(--green);
+  border-radius: 50%;
+  transition: transform 0.6s cubic-bezier(0.65, 0, 0.35, 1), background 0.4s, box-shadow 0.4s;
+  box-shadow: 0 0 10px var(--green);
+}
+
+body.flipped .flip-switch::before {
+  transform: translateX(30px);
+  background: var(--amber);
+  box-shadow: 0 0 14px var(--amber);
+}
+
+@media (max-width: 768px) {
+  .flip-switch-wrap { font-size: 0.55rem; padding: 0.5rem 1rem; bottom: 1rem; }
+}
+
+/* ============================================
+   FLIP GLITCH ANIMATION
+   ============================================ */
+body.flipping {
+  animation: flipGlitch 0.5s steps(8);
+}
+
+@keyframes flipGlitch {
+  0%, 100% { filter: none; }
+  10% { filter: hue-rotate(90deg) saturate(2); }
+  25% { filter: invert(0.3) hue-rotate(45deg); transform: translateX(-3px); }
+  40% { filter: hue-rotate(-90deg) saturate(3); transform: translateX(2px) skewX(2deg); }
+  55% { filter: invert(0.2); transform: translateX(-1px); }
+  70% { filter: hue-rotate(180deg) saturate(2); }
+  85% { filter: saturate(3) brightness(1.2); transform: translateX(1px); }
+}
+
+/* ============================================
+   BACK SIDE (hacker game)
+   ============================================ */
+#back-side {
+  position: fixed;
+  inset: 0;
+  z-index: 8000;
+  background: var(--bg-deep);
+  visibility: hidden;
+  opacity: 0;
+  transform: perspective(1500px) rotateY(-180deg) scale(0.85);
+  transition:
+    transform 1s cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 0.5s ease,
+    visibility 0s linear 1s;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4rem 2.5rem 7rem;
+  font-family: var(--f-mono);
+}
+
+body.flipped #back-side {
+  visibility: visible;
+  opacity: 1;
+  transform: perspective(1500px) rotateY(0deg) scale(1);
+  transition:
+    transform 1s cubic-bezier(0.65, 0, 0.35, 1),
+    opacity 0.5s ease 0.2s,
+    visibility 0s linear 0s;
+}
+
+body.flipped { overflow: hidden; }
+
+body.flipped .hud,
+body.flipped .nav {
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+#back-side::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 255, 65, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 65, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at 18% 28%, rgba(0, 255, 65, 0.15) 1.5px, transparent 2.5px),
+    radial-gradient(circle at 72% 60%, rgba(0, 255, 65, 0.15) 1.5px, transparent 2.5px),
+    radial-gradient(circle at 42% 82%, rgba(0, 255, 65, 0.15) 1.5px, transparent 2.5px);
+  background-size: 60px 60px, 60px 60px, 220px 220px, 280px 280px, 200px 200px;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.back-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 65, 0.04) 0px,
+    rgba(0, 255, 65, 0.04) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  z-index: 1;
+}
+
+.back-hud {
+  position: absolute;
+  top: 1.5rem;
+  font-family: var(--f-mono);
+  font-size: 0.65rem;
+  color: var(--green);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  z-index: 5;
+  line-height: 1.7;
+}
+
+.back-hud.tl { left: 1.5rem; }
+.back-hud.tr { right: 1.5rem; text-align: right; }
+.back-hud .v { color: var(--cyan); }
+.back-hud .red { color: var(--red); animation: pulse 1.5s infinite; }
+
+/* ============================================
+   HACKER STAGE
+   ============================================ */
+.hacker-stage {
+  max-width: 1200px;
+  margin: 4rem auto 0;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 4rem;
+  align-items: start;
+  position: relative;
+  z-index: 5;
+}
+
+@media (max-width: 968px) {
+  .hacker-stage {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    margin-top: 5rem;
+  }
+}
+
+.hacker-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  position: relative;
+}
+
+.hacker-figure svg {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  filter: drop-shadow(0 0 30px var(--green-faint));
+  animation: hoodieFloat 6s ease-in-out infinite;
+  color: var(--green);
+}
+
+@media (max-width: 968px) {
+  .hacker-figure svg { max-width: 200px; }
+}
+
+@keyframes hoodieFloat {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-12px) rotate(1deg); }
+}
+
+.hacker-figure .eye-pupil {
+  animation: blinkEye 5s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.hacker-figure .eye-pupil.right { animation-delay: 0.15s; }
+
+@keyframes blinkEye {
+  0%, 88%, 100% { opacity: 1; }
+  91%, 95% { opacity: 0; }
+}
+
+.hacker-name {
+  font-family: var(--f-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  color: var(--green);
+  text-shadow: 0 0 15px var(--green-faint);
+  margin-top: 0.8rem;
+}
+
+.hacker-status {
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hacker-status .blinkdot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--green);
+}
+
+/* ============================================
+   CHAT PANEL
+   ============================================ */
+.chat-panel {
+  background: var(--surface);
+  border: 1px solid var(--green-dim);
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
+  position: relative;
+  box-shadow: 0 0 50px var(--green-faint);
+}
+
+.chat-header {
+  background: var(--surface-hi);
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--green-dim);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.chat-title { color: var(--green); }
+.chat-title::before { content: '// '; color: var(--green-dim); }
+.chat-status-text { color: var(--text-dim); font-size: 0.6rem; display: flex; align-items: center; gap: 0.4rem; }
+.chat-status-text .blinkdot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+  box-shadow: 0 0 6px var(--green);
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  max-height: 360px;
+  scroll-behavior: smooth;
+}
+
+.chat-messages::-webkit-scrollbar { width: 5px; }
+.chat-messages::-webkit-scrollbar-track { background: var(--bg-deep); }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--green-dim); }
+
+.chat-msg {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  animation: msgIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-msg .who {
+  font-weight: 700;
+  white-space: nowrap;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  padding-top: 0.15em;
+  min-width: 70px;
+}
+
+.chat-msg.bot .who { color: var(--green); }
+.chat-msg.user .who { color: var(--cyan); }
+.chat-msg.system .who { color: var(--amber); }
+
+.chat-msg .txt {
+  flex: 1;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.chat-msg.system .txt {
+  color: var(--amber);
+  font-style: italic;
+  font-size: 0.78rem;
+  opacity: 0.85;
+}
+
+.typing-dots::after {
+  content: '...';
+  animation: dots 1s steps(4) infinite;
+}
+
+@keyframes dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75%, 100% { content: '...'; }
+}
+
+.chat-input-row {
+  border-top: 1px solid var(--green-dim);
+  padding: 0.8rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-deep);
+}
+
+.chat-input-row .prompt {
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+#chat-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: var(--f-mono);
+  font-size: 0.85rem;
+  caret-color: var(--green);
+  min-width: 0;
+}
+
+#chat-input::placeholder { color: var(--text-faint); }
+
+.chat-send {
+  background: transparent;
+  border: 1px solid var(--green-dim);
+  color: var(--green);
+  padding: 0.35rem 0.8rem;
+  font-family: var(--f-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  cursor: none;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  font-weight: 700;
+}
+
+.chat-send:hover {
+  background: var(--green);
+  color: var(--bg-deep);
+  border-color: var(--green);
+}
+
+/* ============================================
+   THEME QUICK CHIPS
+   ============================================ */
+.theme-quick {
+  margin: 2.5rem auto 0;
+  max-width: 900px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  position: relative;
+  z-index: 5;
+}
+
+.theme-quick-label {
+  width: 100%;
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--text-faint);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.theme-chip {
+  background: transparent;
+  border: 1px solid var(--green-dim);
+  color: var(--text-dim);
+  padding: 0.45rem 1rem;
+  font-family: var(--f-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: none;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  font-weight: 500;
+}
+
+.theme-chip:hover {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(0, 255, 65, 0.04);
+}
+
+.theme-chip.reset {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.theme-chip.reset:hover {
+  background: var(--amber);
+  color: var(--bg-deep);
+}
+
+.ephemeral-notice {
+  text-align: center;
+  margin: 2rem auto 0;
+  font-size: 0.65rem;
+  color: var(--text-faint);
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  position: relative;
+  z-index: 5;
+  max-width: 600px;
+  line-height: 1.8;
+}
+
+.ephemeral-notice .v { color: var(--amber); margin-right: 0.4rem; }
+
+</style>
+</head>
+<body>
+
+<!-- CRT EFFECTS -->
+<div class="scanlines"></div>
+<div class="vignette"></div>
+<div class="crt-flicker"></div>
+
+<!-- CURSOR -->
+<div class="cursor"></div>
+<div class="cursor-dot"></div>
+
+<!-- BOOT SEQUENCE -->
+<div class="boot" id="boot"></div>
+
+<!-- BACKGROUND CANVASES -->
+<canvas id="matrix-canvas"></canvas>
+<canvas id="bg-canvas"></canvas>
+
+<!-- SURVEILLANCE HUD -->
+<div class="hud hud-tl">
+  <span class="hud-line"><span class="rec-dot"></span>REC // CTOS_NODE_<span class="v" id="hud-node">0042</span></span>
+  <span class="hud-line">UPTIME: <span class="v" id="hud-uptime">00:00:00</span></span>
+  <span class="hud-line">LAT: <span class="v">40°57'N</span> · LON: <span class="v">5°40'W</span></span>
+</div>
+
+<div class="hud hud-tr">
+  <span class="hud-line">SYS: <span class="v">ONLINE</span></span>
+  <span class="hud-line">SIGNAL: <span class="v">▓▓▓▓▓▓▓░ 87%</span></span>
+  <span class="hud-line">ENC: <span class="v">AES-256</span></span>
+</div>
+
+<div class="hud hud-bl">
+  <span class="hud-line">USER: <span class="v">M.R.C // GUEST_OBSERVER</span></span>
+  <span class="hud-line" id="hud-clock">--:--:-- UTC</span>
+</div>
+
+<div class="hud hud-br">
+  <span class="hud-line">CPU <span class="v" id="hud-cpu">23%</span></span>
+  <span class="hud-line">MEM <span class="v" id="hud-mem">41%</span></span>
+  <span class="hud-line">NET <span class="v">↑1.2K ↓4.7K</span></span>
+</div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">M.R.C<span class="blink"></span></div>
+  <ul class="nav-links">
+    <li><a href="#perfil">01_perfil</a></li>
+    <li><a href="#capacidades">02_skills</a></li>
+    <li><a href="#stack">03_stack</a></li>
+    <li><a href="#ops">04_ops</a></li>
+    <li><a href="#terminal">05_term</a></li>
+    <li><a href="#contact">06_contact</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-prefix">
+    <span class="err">CONNECTION_ESTABLISHED</span> // INTRUSIÓN DETECTADA
+  </div>
+
+  <h1 class="hero-title">
+    <span class="hero-title-row">
+      <span class="glitch" data-text="MARIO">MARIO</span>
+    </span>
+    <span class="hero-title-row">
+      <span class="glitch accent" data-text="RODRÍGUEZ">RODRÍGUEZ</span>
+    </span>
+  </h1>
+
+  <p class="hero-sub">
+    <span class="tag">FULL_STACK_DEV</span>
+    <span class="tag amber">ETHICAL_HACKER</span>
+    <span class="tag cyan">PROBLEM_SOLVER</span>
+    <br><br>
+    Construyo software de día. De noche, busco la forma de romperlo.
+  </p>
+
+  <div class="hero-status">
+    <div class="hero-status-row"><span class="label">// STATUS</span><span class="val">ACTIVE</span></div>
+    <div class="hero-status-row"><span class="label">// LOCATION</span><span class="val cyan">SALAMANCA, ES</span></div>
+    <div class="hero-status-row"><span class="label">// MODE</span><span class="val amber">DUAL_OPS</span></div>
+    <div class="hero-status-row"><span class="label">// CLEARANCE</span><span class="val">LVL 3</span></div>
+    <div class="hero-status-row"><span class="label">// LAST_SCAN</span><span class="val">< 1 min</span></div>
+  </div>
+
+  <div class="hero-scroll">SCROLL_DOWN</div>
+</section>
+
+<!-- PERFIL -->
+<section id="perfil">
+  <div class="section-divider"></div>
+  <div class="section-header">
+    <span class="section-tag">01_perfil</span>
+    <h2 class="section-title">Sobre el <span class="underline accent">sujeto</span></h2>
+  </div>
+
+  <div class="perfil-grid">
+    <div class="dossier reveal">
+      <div class="dossier-header">// PERFIL DEL SUJETO</div>
+
+<div class="dossier-asciiportrait">
+   ╔══════════════╗
+   ║ ░░██████░░░░ ║
+   ║ ░██░░░░██░░░ ║
+   ║ ██▓▓▓▓▓▓██░░ ║
+   ║ ██▓██▓▓██▓██ ║
+   ║ ██▓▓▓██▓▓▓██ ║
+   ║ ██▓██████▓██ ║
+   ║ ░██▓▓▓▓▓▓██░ ║
+   ║ ░░████████░░ ║
+   ╚══════════════╝
+   [ ID: 0x4D5243 ]
+</div>
+
+      <div class="dossier-row"><span class="dossier-key">name</span><span class="dossier-val">Mario R.C.</span></div>
+      <div class="dossier-row"><span class="dossier-key">alias</span><span class="dossier-val cyan">m.r.c</span></div>
+      <div class="dossier-row"><span class="dossier-key">role</span><span class="dossier-val">Full-Stack Dev</span></div>
+      <div class="dossier-row"><span class="dossier-key">study</span><span class="dossier-val amber">Ethical Hacking</span></div>
+      <div class="dossier-row"><span class="dossier-key">location</span><span class="dossier-val">Salamanca · ES</span></div>
+      <div class="dossier-row">
+        <span class="dossier-key">threat_lvl</span>
+        <span class="dossier-val amber">
+          <span class="threat-bar amber">
+            <span class="on"></span><span class="on"></span><span class="on"></span>
+            <span class="on"></span><span class="on"></span><span></span>
+            <span></span><span></span>
+          </span>
+        </span>
+      </div>
+      <div class="dossier-row"><span class="dossier-key">status</span><span class="dossier-val">// ACTIVE</span></div>
+      <div class="dossier-row"><span class="dossier-key">last_seen</span><span class="dossier-val">just now</span></div>
+
+      <div class="dossier-footer">
+        <span>FILE_v2.6</span>
+        <span>EYES_ONLY</span>
+      </div>
+    </div>
+
+    <div class="bio">
+      <div class="bio-block reveal">
+        <h4>quien.es()</h4>
+        <p>Desarrollador <em>full-stack</em> al que la curiosidad le hace cruzar dos mundos: <em>construir</em> sistemas y <em>entender cómo se rompen</em>. De día escribo código que resuelve problemas reales. De noche estudio <em>hacking ético</em> porque creer que algo es seguro sin haberlo intentado romper es solo un acto de fe.</p>
+      </div>
+
+      <div class="bio-block reveal">
+        <h4>como.trabajo()</h4>
+        <p>Hands-on en toda la pila — <em>frontend, backend, base de datos, deploy, debugging</em>. No delego lo que puedo aprender. Si algo falla, lo persigo hasta encontrar el archivo exacto que lo está provocando. Esa misma terquedad es la que me lleva ahora al <strong>pentesting</strong> y a la seguridad ofensiva.</p>
+      </div>
+
+      <div class="bio-block reveal">
+        <h4>filosofia.txt</h4>
+        <p>Creo en el <em>código que se ejecuta</em> sobre el código que se documenta — aunque ambos importan. Creo en <em>aprender rompiendo</em>. Creo que un buen desarrollador piensa como atacante, y un buen atacante piensa como desarrollador. <strong>El que entiende ambos lados, gana</strong>.</p>
+      </div>
+
+      <div class="bio-block reveal">
+        <h4>fuera.del.terminal()</h4>
+        <p>Cuando no estoy frente a un IDE o una consola, sigo siendo <em>la misma persona curiosa</em>: probando cosas, fallando, iterando. Aprender es lo que más me engancha — y no parece tener un techo a la vista.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CAPACIDADES -->
+<section id="capacidades">
+  <div class="section-divider"></div>
+  <div class="section-header">
+    <span class="section-tag">02_capacidades</span>
+    <h2 class="section-title"><span class="accent">/</span>capabilities</h2>
+  </div>
+
+  <div class="cap-grid">
+    <!-- DEV PANEL -->
+    <div class="cap-panel reveal">
+      <div class="cap-panel-header">
+        <span class="cap-mode">DEV_MODE</span>
+        <span class="cap-status"><span class="dot"></span>OPERATIVO</span>
+      </div>
+
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">JavaScript / TS</span><span class="skill-level">▓▓▓▓▓▓▓▓▓░ 92</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="92"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">PHP / Backend</span><span class="skill-level">▓▓▓▓▓▓▓▓░░ 85</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="85"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">HTML / CSS</span><span class="skill-level">▓▓▓▓▓▓▓▓▓░ 90</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="90"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">Node.js / APIs</span><span class="skill-level">▓▓▓▓▓▓▓▓░░ 80</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="80"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">SQL / SQLite</span><span class="skill-level">▓▓▓▓▓▓▓▓░░ 82</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="82"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">Git / Linux</span><span class="skill-level">▓▓▓▓▓▓▓▓░░ 80</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="80"></div></div>
+      </div>
+    </div>
+
+    <!-- SEC PANEL -->
+    <div class="cap-panel sec reveal">
+      <div class="cap-panel-header">
+        <span class="cap-mode">SEC_MODE</span>
+        <span class="cap-status"><span class="dot"></span>EN ENTRENAMIENTO</span>
+      </div>
+
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">Pentesting Web</span><span class="skill-level">▓▓▓▓▓▓░░░░ 60</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="60"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">OWASP Top 10</span><span class="skill-level">▓▓▓▓▓▓▓░░░ 70</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="70"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">Network Recon</span><span class="skill-level">▓▓▓▓▓░░░░░ 55</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="55"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">Linux / Bash</span><span class="skill-level">▓▓▓▓▓▓▓░░░ 70</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="70"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">Cripto / Hashes</span><span class="skill-level">▓▓▓▓▓░░░░░ 50</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="50"></div></div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-info"><span class="skill-name">CTF / Labs</span><span class="skill-level">▓▓▓▓▓▓░░░░ 60</span></div>
+        <div class="skill-bar"><div class="skill-bar-fill" data-level="60"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STACK -->
+<section id="stack">
+  <div class="section-divider"></div>
+  <div class="section-header">
+    <span class="section-tag">03_stack</span>
+    <h2 class="section-title">arsenal<span class="accent">.list()</span></h2>
+  </div>
+
+  <div class="terminal-stack">
+    <div class="terminal-bar">
+      <span class="dot r"></span>
+      <span class="dot y"></span>
+      <span class="dot g"></span>
+      <span class="title">~/mrc/arsenal $ ls -la --tools</span>
+    </div>
+    <div class="terminal-body">
+      <span class="term-line"><span class="prompt">$</span> <span class="dim">cat</span> /etc/dev_stack</span>
+      <span class="term-line"><span class="dim">→ Querying installed packages...</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">javascript</span><span class="arrow">::</span><span class="out">vanilla, modern es20xx</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">typescript</span><span class="arrow">::</span><span class="out">type-safe, prefer estricto</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">node.js</span><span class="arrow">::</span><span class="out">apis, scripts, automation</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">php</span><span class="arrow">::</span><span class="out">backend, slim, frameworks</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">python</span><span class="arrow">::</span><span class="out">scripting, automation, sec</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">sql / sqlite / mysql</span><span class="arrow">::</span><span class="out">persistence layer</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">html / css</span><span class="arrow">::</span><span class="out">animations, responsive, ui</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">three.js / webgl</span><span class="arrow">::</span><span class="out">3d graphics, shaders</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">git</span><span class="arrow">::</span><span class="out">control de versiones</span></span>
+      <span class="term-line"><span class="ok">[OK]</span> <span class="cyan">linux / bash</span><span class="arrow">::</span><span class="out">daily driver</span></span>
+      <br>
+      <span class="term-line"><span class="prompt">$</span> <span class="dim">cat</span> /etc/sec_stack <span class="amber">--studying</span></span>
+      <span class="term-line"><span class="amber">[..]</span> <span class="cyan">kali linux</span><span class="arrow">::</span><span class="out">distro de pentesting</span></span>
+      <span class="term-line"><span class="amber">[..]</span> <span class="cyan">nmap</span><span class="arrow">::</span><span class="out">network mapping & recon</span></span>
+      <span class="term-line"><span class="amber">[..]</span> <span class="cyan">burp suite</span><span class="arrow">::</span><span class="out">web pentesting proxy</span></span>
+      <span class="term-line"><span class="amber">[..]</span> <span class="cyan">wireshark</span><span class="arrow">::</span><span class="out">packet analysis</span></span>
+      <span class="term-line"><span class="amber">[..]</span> <span class="cyan">metasploit</span><span class="arrow">::</span><span class="out">exploitation framework</span></span>
+      <span class="term-line"><span class="amber">[..]</span> <span class="cyan">john / hashcat</span><span class="arrow">::</span><span class="out">password cracking</span></span>
+      <span class="term-line"><span class="amber">[..]</span> <span class="cyan">owasp zap</span><span class="arrow">::</span><span class="out">web vuln scanner</span></span>
+      <span class="term-line"><span class="amber">[..]</span> <span class="cyan">tryhackme / htb</span><span class="arrow">::</span><span class="out">labs · ctf · práctica</span></span>
+      <br>
+      <span class="term-line"><span class="prompt">$</span> <span class="ok">_</span></span>
+    </div>
+  </div>
+</section>
+
+<!-- OPS / PROYECTOS -->
+<section id="ops">
+  <div class="section-divider"></div>
+  <div class="section-header">
+    <span class="section-tag">04_operaciones</span>
+    <h2 class="section-title">field<span class="accent">.</span>ops</h2>
+  </div>
+
+  <div class="ops-grid">
+    <article class="op-card reveal">
+      <div class="op-header">
+        <span class="op-id">// OP_001</span>
+        <span class="op-status">ACTIVE</span>
+      </div>
+      <div class="op-body">
+        <div class="op-type">SAAS · DESKTOP APP</div>
+        <h3 class="op-codename">Desktop <span class="accent">SaaS</span></h3>
+        <p class="op-desc">Aplicación de escritorio multi-tenant con backend integrado, sincronización con CRMs externos y un sistema de procesamiento documental. En producción, con clientes activos.</p>
+        <div class="op-tech">
+          <span>Electron</span><span>PHP</span><span>SQLite</span><span>JS</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="op-card reveal">
+      <div class="op-header">
+        <span class="op-id">// OP_002</span>
+        <span class="op-status amber">CLASSIFIED</span>
+      </div>
+      <div class="op-body">
+        <div class="op-type">WEB FULL-STACK</div>
+        <h3 class="op-codename">Plataformas <span class="accent">web</span></h3>
+        <p class="op-desc">Sitios y aplicaciones web a medida — frontend interactivo, backend con API REST, autenticación, panel de administración. Desde landings con animaciones a dashboards complejos.</p>
+        <div class="op-tech">
+          <span>JS</span><span>HTML/CSS</span><span>Node</span><span>SQL</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="op-card reveal">
+      <div class="op-header">
+        <span class="op-id">// OP_003</span>
+        <span class="op-status amber">IN_PROGRESS</span>
+      </div>
+      <div class="op-body">
+        <div class="op-type">PENTESTING LAB</div>
+        <h3 class="op-codename">Sec<span class="accent">_</span>training</h3>
+        <p class="op-desc">Práctica continua en laboratorios controlados (TryHackMe, HackTheBox). Reconocimiento, explotación de vulnerabilidades web, escalada de privilegios, análisis de tráfico.</p>
+        <div class="op-tech">
+          <span>Nmap</span><span>Burp</span><span>Linux</span><span>Python</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="op-card reveal">
+      <div class="op-header">
+        <span class="op-id">// OP_004</span>
+        <span class="op-status">DEPLOYED</span>
+      </div>
+      <div class="op-body">
+        <div class="op-type">AUTOMATIZACIÓN</div>
+        <h3 class="op-codename">Bots <span class="accent">&amp;</span> scripts</h3>
+        <p class="op-desc">Automatización de tareas repetitivas — scrapers controlados, integraciones API, scripts de procesamiento. Convierto procesos manuales de horas en flujos automatizados.</p>
+        <div class="op-tech">
+          <span>Python</span><span>Playwright</span><span>Node</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="op-card reveal">
+      <div class="op-header">
+        <span class="op-id">// OP_005</span>
+        <span class="op-status">DEPLOYED</span>
+      </div>
+      <div class="op-body">
+        <div class="op-type">UI / FRONTEND</div>
+        <h3 class="op-codename">Interfaces <span class="accent">3D</span></h3>
+        <p class="op-desc">Frontends con animación avanzada, visualización 3D y experiencias interactivas. Esta misma web es un ejemplo: scanlines CRT, glitch RGB, red de nodos en WebGL.</p>
+        <div class="op-tech">
+          <span>Three.js</span><span>GSAP</span><span>WebGL</span><span>Canvas</span>
+        </div>
+      </div>
+    </article>
+
+    <article class="op-card reveal">
+      <div class="op-header">
+        <span class="op-id">// OP_006</span>
+        <span class="op-status dim">LOADING...</span>
+      </div>
+      <div class="op-body">
+        <div class="op-type">[ENCRYPTED]</div>
+        <h3 class="op-codename">??<span class="accent">?</span>??</h3>
+        <p class="op-desc">Próxima operación todavía clasificada. Si tienes un proyecto que necesita código, automatización o seguridad, este slot está abierto.</p>
+        <div class="op-tech">
+          <span>proximamente</span><span>filtracion del futuro</span>
+        </div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- INTERACTIVE TERMINAL -->
+<section id="terminal">
+  <div class="section-divider"></div>
+  <div class="section-header">
+    <span class="section-tag">05_terminal</span>
+    <h2 class="section-title">live<span class="accent">_</span>shell</h2>
+  </div>
+
+  <div class="live-terminal reveal">
+    <div class="live-term-bar">
+      <div class="left">
+        <span class="dot r"></span>
+        <span class="dot y"></span>
+        <span class="dot g"></span>
+      </div>
+      <span>guest@mrc.local — bash — 80×24</span>
+      <span></span>
+    </div>
+    <div class="live-term-body" id="term-body">
+      <div class="term-out"><span class="cyan">Welcome to MRC.shell v2.6</span></div>
+      <div class="term-out"><span class="dim">Sistema operativo: ctOS / linux-mrc</span></div>
+      <div class="term-out"><span class="dim">Última conexión: just now</span></div>
+      <div class="term-out"></div>
+      <div class="term-out">Escribe <span class="ok">help</span> para ver los comandos disponibles.</div>
+      <div class="term-out"></div>
+    </div>
+    <div class="live-term-body" style="border-top:1px solid var(--green-dim); min-height:auto; padding-top:0.5rem;">
+      <div class="term-input-row">
+        <span class="prompt">guest@mrc:~$</span>
+        <input type="text" id="term-input" autocomplete="off" spellcheck="false" autofocus>
+      </div>
+    </div>
+  </div>
+  <div class="term-hint">PRUEBA: <kbd>help</kbd> <kbd>whoami</kbd> <kbd>skills</kbd> <kbd>ls /ops</kbd> <kbd>hack</kbd> <kbd>matrix</kbd> <kbd>sudo</kbd></div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-divider"></div>
+
+  <div class="contact-wrap">
+    <div class="contact-prompt">06_establish_connection</div>
+    <h2 class="contact-headline">¿hablamos<span class="accent">?</span><span class="blink"></span></h2>
+    <p class="contact-desc">
+      Si tienes algo que construir, romper, automatizar o simplemente discutir — el canal está abierto.
+    </p>
+
+    <div class="contact-channels">
+      <a href="https://www.linkedin.com/in/mario-rodriguez-carbonero-384a3032a" target="_blank" rel="noopener" class="channel">
+        <span class="channel-key">// LINKEDIN</span>
+        <span class="channel-val">/in/Mario Rodriguez Carbonero</span>
+      </a>
+      <a href="https://github.com/" target="_blank" rel="noopener" class="channel">
+        <span class="channel-key">// GITHUB</span>
+        <span class="channel-val">/MarioRC03</span>
+      </a>
+      <a href="" class="channel">
+        <span class="channel-key">// EMAIL</span>
+        <span class="channel-val">mariorc2710@gmail.com</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <div>
+    <div class="footer-mark">M.R.C</div>
+    <div style="margin-top:0.5rem;">SALAMANCA · ES // 2026</div>
+  </div>
+  <div style="text-align:center;">
+    <span class="v" style="color:var(--green);">█</span> SISTEMA OPERATIVO · TODOS LOS DERECHOS RESERVADOS
+  </div>
+  <div class="footer-end">
+    BUILT_WITH<br>
+    <span class="v">JS · GSAP · THREE.JS · CSS</span>
+  </div>
+</footer>
+
+<!-- ============================================
+     FLIP SWITCH (fixed bottom)
+     ============================================ -->
+<div class="flip-switch-wrap">
+  <span class="flip-label active" id="lbl-front">PORTFOLIO</span>
+  <button class="flip-switch" id="flip-switch" aria-label="Flip to backdoor"></button>
+  <span class="flip-label" id="lbl-back">BACKDOOR</span>
+</div>
+
+<!-- ============================================
+     BACK SIDE — CIPHER (hooded hacker bot)
+     ============================================ -->
+<div id="back-side">
+  <div class="back-scanlines"></div>
+
+  <div class="back-hud tl">
+    <span>// LAYER_02 · BACKDOOR</span><br>
+    <span>NODE: <span class="v">underground</span></span><br>
+    <span>BREACH: <span class="red">ACTIVE</span></span>
+  </div>
+  <div class="back-hud tr">
+    <span>CIPHER_v0.6</span><br>
+    <span>STATUS: <span class="v">ONLINE</span></span><br>
+    <span>UPTIME: <span class="v" id="cipher-uptime">00:00</span></span>
+  </div>
+
+  <div class="hacker-stage">
+
+    <div class="hacker-figure">
+      <svg viewBox="0 0 280 360" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="cipherEyeGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="currentColor" stop-opacity="0.85"/>
+            <stop offset="40%" stop-color="currentColor" stop-opacity="0.4"/>
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+
+        <!-- shoulders / torso -->
+        <path d="M30,310 Q140,265 250,310 L260,360 L20,360 Z"
+              fill="#0a0d12" stroke="currentColor" stroke-width="1" opacity="0.7"/>
+        <line x1="140" y1="280" x2="140" y2="360" stroke="currentColor" stroke-width="0.5" opacity="0.5"/>
+        <line x1="80" y1="320" x2="115" y2="335" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+        <line x1="200" y1="320" x2="165" y2="335" stroke="currentColor" stroke-width="0.5" opacity="0.4"/>
+
+        <!-- hood outline -->
+        <path d="M55,100 Q140,30 225,100 Q260,200 240,300 Q140,330 40,300 Q20,200 55,100 Z"
+              fill="#0a0d12" stroke="currentColor" stroke-width="2"/>
+
+        <!-- inner hood void -->
+        <path d="M85,150 Q140,100 195,150 Q215,210 200,270 Q140,290 80,270 Q65,210 85,150 Z"
+              fill="#000"/>
+
+        <!-- circuit details on hood -->
+        <path d="M70,140 L85,140 L85,155 M195,140 L210,140 L210,155 M65,250 L80,250 M200,250 L215,250"
+              stroke="currentColor" stroke-width="0.5" fill="none" opacity="0.5"/>
+        <circle cx="85" cy="155" r="2" fill="currentColor" opacity="0.6"/>
+        <circle cx="210" cy="155" r="2" fill="currentColor" opacity="0.6"/>
+        <circle cx="80" cy="250" r="1.5" fill="currentColor" opacity="0.5"/>
+        <circle cx="215" cy="250" r="1.5" fill="currentColor" opacity="0.5"/>
+
+        <!-- eye glow halos -->
+        <circle cx="115" cy="195" r="22" fill="url(#cipherEyeGlow)"/>
+        <circle cx="165" cy="195" r="22" fill="url(#cipherEyeGlow)"/>
+
+        <!-- eye pupils (animated) -->
+        <circle cx="115" cy="195" r="3.5" fill="white" class="eye-pupil"/>
+        <circle cx="165" cy="195" r="3.5" fill="white" class="eye-pupil right"/>
+      </svg>
+      <div class="hacker-name">[ CIPHER ]</div>
+      <div class="hacker-status"><span class="blinkdot"></span><span id="cipher-state">WAITING_INPUT</span></div>
+    </div>
+
+    <div class="chat-panel">
+      <div class="chat-header">
+        <span class="chat-title">SECURE_CHANNEL</span>
+        <span class="chat-status-text"><span class="blinkdot"></span>CONNECTED</span>
+      </div>
+      <div class="chat-messages" id="chat-messages">
+        <!-- populated via JS -->
+      </div>
+      <div class="chat-input-row">
+        <span class="prompt">you$</span>
+        <input id="chat-input" type="text" autocomplete="off" spellcheck="false" placeholder="dime un tema · escribe 'help'...">
+        <button class="chat-send" id="chat-send">SEND</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="theme-quick">
+    <span class="theme-quick-label">// quick themes</span>
+    <button class="theme-chip" data-theme="cyberpunk">CYBERPUNK</button>
+    <button class="theme-chip" data-theme="fuego">FUEGO</button>
+    <button class="theme-chip" data-theme="ocean">OCEANO</button>
+    <button class="theme-chip" data-theme="oro">ORO</button>
+    <button class="theme-chip" data-theme="rosa">ROSA</button>
+    <button class="theme-chip" data-theme="sangre">SANGRE</button>
+    <button class="theme-chip" data-theme="naranja">NARANJA</button>
+    <button class="theme-chip" data-theme="blanco">MINIMAL</button>
+    <button class="theme-chip reset" data-theme="reset">RESET</button>
+  </div>
+
+  <div class="ephemeral-notice">
+    <span class="v">⚠</span> los cambios son temporales. al cerrar la pestaña, el original siempre vuelve.
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script>
+/* ============================================
+   BOOT SEQUENCE
+   ============================================ */
+(function() {
+  const boot = document.getElementById('boot');
+  const lines = [
+    { t: '> [ ctOS_v2.6 ] Initializing kernel...', c: '' },
+    { t: '> Loading cryptographic modules......... <span class="ok">[OK]</span>', c: '' },
+    { t: '> Establishing secure tunnel........... <span class="ok">[OK]</span>', c: '' },
+    { t: '> Bypassing perimeter firewall......... <span class="ok">[OK]</span>', c: '' },
+    { t: '> Mounting /dev/mrc.................... <span class="ok">[OK]</span>', c: '' },
+    { t: '> Scanning visitor identity............ <span class="warn">[GUEST]</span>', c: '' },
+    { t: '> ', c: '' },
+    { t: '> <span class="ok">CONNECTION ESTABLISHED.</span>', c: '' },
+    { t: '> Welcome to <span class="ok">MRC.NETWORK</span>.', c: '' },
+    { t: '> Initializing UI<span class="boot-cursor"></span>', c: '' }
+  ];
+
+  let i = 0;
+  function next() {
+    if (i >= lines.length) {
+      setTimeout(() => boot.classList.add('hidden'), 600);
+      return;
+    }
+    const div = document.createElement('div');
+    div.className = 'boot-line show';
+    div.innerHTML = lines[i].t;
+    boot.appendChild(div);
+    i++;
+    setTimeout(next, 180 + Math.random() * 100);
+  }
+  setTimeout(next, 200);
+})();
+
+/* ============================================
+   CUSTOM CURSOR
+   ============================================ */
+(function() {
+  const cursor = document.querySelector('.cursor');
+  const dot = document.querySelector('.cursor-dot');
+  let mx = 0, my = 0, cx = 0, cy = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mx = e.clientX;
+    my = e.clientY;
+    dot.style.left = mx + 'px';
+    dot.style.top = my + 'px';
+  });
+
+  function animate() {
+    cx += (mx - cx) * 0.2;
+    cy += (my - cy) * 0.2;
+    cursor.style.left = cx + 'px';
+    cursor.style.top = cy + 'px';
+    requestAnimationFrame(animate);
+  }
+  animate();
+
+  document.querySelectorAll('a, button, input, .op-card, .channel').forEach(el => {
+    el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+  });
+})();
+
+/* ============================================
+   HUD - LIVE CLOCK / STATS
+   ============================================ */
+(function() {
+  const clockEl = document.getElementById('hud-clock');
+  const uptimeEl = document.getElementById('hud-uptime');
+  const cpuEl = document.getElementById('hud-cpu');
+  const memEl = document.getElementById('hud-mem');
+  const startTime = Date.now();
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function tick() {
+    const d = new Date();
+    if (clockEl) clockEl.textContent = `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())} UTC`;
+
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const h = Math.floor(elapsed / 3600);
+    const m = Math.floor((elapsed % 3600) / 60);
+    const s = elapsed % 60;
+    if (uptimeEl) uptimeEl.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+
+    if (cpuEl && Math.random() > 0.7) cpuEl.textContent = (15 + Math.floor(Math.random() * 35)) + '%';
+    if (memEl && Math.random() > 0.8) memEl.textContent = (35 + Math.floor(Math.random() * 25)) + '%';
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+
+/* ============================================
+   MATRIX RAIN
+   ============================================ */
+(function() {
+  const canvas = document.getElementById('matrix-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$#@%&*+-=<>/{}[]';
+  const fontSize = 14;
+  let columns = Math.floor(canvas.width / fontSize);
+  let drops = Array(columns).fill(0).map(() => Math.random() * -100);
+
+  window.addEventListener('resize', () => {
+    columns = Math.floor(canvas.width / fontSize);
+    drops = Array(columns).fill(0).map(() => Math.random() * -100);
+  });
+
+  function draw() {
+    ctx.fillStyle = 'rgba(5, 6, 8, 0.08)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.font = fontSize + 'px monospace';
+
+    for (let i = 0; i < drops.length; i++) {
+      const ch = chars[Math.floor(Math.random() * chars.length)];
+      const x = i * fontSize;
+      const y = drops[i] * fontSize;
+
+      // Bright leading character
+      if (drops[i] * fontSize < canvas.height && drops[i] > 0) {
+        ctx.fillStyle = (window.__themeColors && window.__themeColors.matrixBright) || '#a8ffba';
+        ctx.fillText(ch, x, y);
+
+        // Trailing fade
+        ctx.fillStyle = (window.__themeColors && window.__themeColors.matrixDim) || '#00ff41';
+        ctx.fillText(chars[Math.floor(Math.random() * chars.length)], x, y - fontSize);
+      }
+
+      if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+        drops[i] = 0;
+      }
+      drops[i]++;
+    }
+  }
+
+  setInterval(draw, 55);
+})();
+
+/* ============================================
+   THREE.JS NETWORK NODES
+   ============================================ */
+(function() {
+  if (typeof THREE === 'undefined') return;
+  const canvas = document.getElementById('bg-canvas');
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(0x050608, 6, 30);
+
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.z = 14;
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  // Create nodes
+  const nodeCount = 60;
+  const nodes = [];
+  const nodeGroup = new THREE.Group();
+
+  const nodeGeo = new THREE.SphereGeometry(0.06, 8, 8);
+  const nodeMat = new THREE.MeshBasicMaterial({ color: 0x00ff41, transparent: true, opacity: 0.9 });
+  window.__network = window.__network || {};
+  window.__network.nodeMat = nodeMat;
+
+  for (let i = 0; i < nodeCount; i++) {
+    const mesh = new THREE.Mesh(nodeGeo, nodeMat.clone());
+    mesh.position.set(
+      (Math.random() - 0.5) * 22,
+      (Math.random() - 0.5) * 16,
+      (Math.random() - 0.5) * 12
+    );
+    mesh.userData = {
+      basePos: mesh.position.clone(),
+      vel: new THREE.Vector3(
+        (Math.random() - 0.5) * 0.005,
+        (Math.random() - 0.5) * 0.005,
+        (Math.random() - 0.5) * 0.005
+      ),
+      pulse: Math.random() * Math.PI * 2
+    };
+    nodes.push(mesh);
+    nodeGroup.add(mesh);
+  }
+
+  // Lines between near nodes
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0x00ff41,
+    transparent: true,
+    opacity: 0.15
+  });
+  window.__network.lineMat = lineMat;
+  const lineGeo = new THREE.BufferGeometry();
+  const linePositions = new Float32Array(nodeCount * nodeCount * 6);
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+  const lines = new THREE.LineSegments(lineGeo, lineMat);
+  nodeGroup.add(lines);
+
+  scene.add(nodeGroup);
+  window.__network.nodes = nodes;
+
+  // Mouse parallax
+  let tx = 0, ty = 0, cx = 0, cy = 0;
+  document.addEventListener('mousemove', (e) => {
+    tx = (e.clientX / window.innerWidth - 0.5) * 0.4;
+    ty = (e.clientY / window.innerHeight - 0.5) * 0.4;
+  });
+
+  let scrollY = 0;
+  window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+
+  function animate() {
+    requestAnimationFrame(animate);
+    const t = performance.now() * 0.001;
+
+    cx += (tx - cx) * 0.05;
+    cy += (ty - cy) * 0.05;
+
+    nodes.forEach((n) => {
+      n.position.add(n.userData.vel);
+      n.userData.pulse += 0.03;
+
+      // Bounds wrap
+      if (Math.abs(n.position.x) > 12) n.userData.vel.x *= -1;
+      if (Math.abs(n.position.y) > 9) n.userData.vel.y *= -1;
+      if (Math.abs(n.position.z) > 7) n.userData.vel.z *= -1;
+
+      // Pulsing opacity
+      n.material.opacity = 0.5 + Math.sin(n.userData.pulse) * 0.4;
+    });
+
+    // Update line connections
+    let linePos = lines.geometry.attributes.position.array;
+    let lineIdx = 0;
+    const maxDist = 3;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const d = nodes[i].position.distanceTo(nodes[j].position);
+        if (d < maxDist) {
+          linePos[lineIdx++] = nodes[i].position.x;
+          linePos[lineIdx++] = nodes[i].position.y;
+          linePos[lineIdx++] = nodes[i].position.z;
+          linePos[lineIdx++] = nodes[j].position.x;
+          linePos[lineIdx++] = nodes[j].position.y;
+          linePos[lineIdx++] = nodes[j].position.z;
+        }
+      }
+    }
+    // Zero out the rest
+    for (; lineIdx < linePos.length; lineIdx++) linePos[lineIdx] = 0;
+    lines.geometry.attributes.position.needsUpdate = true;
+
+    nodeGroup.rotation.y = cx * 0.5 + t * 0.05;
+    nodeGroup.rotation.x = cy * 0.3;
+
+    camera.position.y = -scrollY * 0.003;
+
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+})();
+
+/* ============================================
+   SCROLL REVEAL
+   ============================================ */
+(function() {
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        entry.target.style.transitionDelay = `${i * 0.05}s`;
+        entry.target.classList.add('visible');
+        obs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+})();
+
+/* ============================================
+   SKILL BARS
+   ============================================ */
+(function() {
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const fill = entry.target;
+        fill.style.width = fill.dataset.level + '%';
+        obs.unobserve(fill);
+      }
+    });
+  }, { threshold: 0.4 });
+
+  document.querySelectorAll('.skill-bar-fill').forEach(el => obs.observe(el));
+})();
+
+/* ============================================
+   GSAP SECTION TITLES
+   ============================================ */
+(function() {
+  if (typeof gsap === 'undefined') return;
+  gsap.registerPlugin(ScrollTrigger);
+
+  gsap.utils.toArray('.section-title').forEach(t => {
+    gsap.from(t, {
+      y: 50,
+      opacity: 0,
+      duration: 1,
+      ease: 'power3.out',
+      scrollTrigger: { trigger: t, start: 'top 85%' }
+    });
+  });
+
+  gsap.utils.toArray('.section-tag').forEach(t => {
+    gsap.from(t, {
+      x: -30,
+      opacity: 0,
+      duration: 0.8,
+      ease: 'power2.out',
+      scrollTrigger: { trigger: t, start: 'top 85%' }
+    });
+  });
+})();
+
+/* ============================================
+   DECRYPT TEXT EFFECT (on section titles)
+   ============================================ */
+(function() {
+  const charset = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`abcdefghijklmnopqrstuvwxyz0123456789';
+  function scramble(el) {
+    const original = el.textContent;
+    const len = original.length;
+    let iter = 0;
+    const total = 18;
+    const interval = setInterval(() => {
+      el.textContent = original.split('').map((c, i) => {
+        if (i < iter) return original[i];
+        if (c === ' ') return ' ';
+        return charset[Math.floor(Math.random() * charset.length)];
+      }).join('');
+      iter += len / total;
+      if (iter >= len) {
+        clearInterval(interval);
+        el.textContent = original;
+      }
+    }, 40);
+  }
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        if (el.dataset.decrypted) return;
+        el.dataset.decrypted = '1';
+        // Only decrypt direct text portions (skip nested HTML for simplicity, only fire on section-tag)
+        scramble(el);
+        obs.unobserve(el);
+      }
+    });
+  }, { threshold: 0.5 });
+
+  document.querySelectorAll('.section-tag').forEach(el => obs.observe(el));
+})();
+
+/* ============================================
+   INTERACTIVE TERMINAL
+   ============================================ */
+(function() {
+  const input = document.getElementById('term-input');
+  const body = document.getElementById('term-body');
+  if (!input || !body) return;
+
+  const history = [];
+  let histIdx = -1;
+
+  function append(html) {
+    const div = document.createElement('div');
+    div.className = 'term-out';
+    div.innerHTML = html;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  const commands = {
+    help: () => `<span class="ok">Comandos disponibles:</span>
+  <span class="cyan">help</span>      — muestra esta ayuda
+  <span class="cyan">whoami</span>    — perfil del operador
+  <span class="cyan">skills</span>    — lista capacidades dev + sec
+  <span class="cyan">stack</span>     — alias de skills
+  <span class="cyan">ls /ops</span>   — lista operaciones
+  <span class="cyan">cat /ops/N</span>— detalle de operación N (1-6)
+  <span class="cyan">contact</span>   — canales de comunicación
+  <span class="cyan">social</span>    — alias de contact
+  <span class="cyan">date</span>      — timestamp actual
+  <span class="cyan">echo &lt;txt&gt;</span> — repite texto
+  <span class="cyan">hack</span>      — secuencia de breach simulado
+  <span class="cyan">matrix</span>    — entra en la matrix
+  <span class="cyan">sudo</span>      — intentos de privilegio
+  <span class="cyan">clear</span>     — limpia la consola
+  <span class="cyan">about</span>     — sobre este sistema`,
+    whoami: () => `<span class="ok">guest@mrc.local</span>
+  uid=1337(guest) gid=1337(observer) groups=1337(observer)
+  visiting <span class="cyan">M.R.C // Mario Rodríguez Carbonero</span>
+  role: full-stack developer + ethical hacking student
+  loc:  Salamanca, ES
+  hint: prueba <span class="cyan">about</span> o <span class="cyan">skills</span>`,
+    skills: () => `<span class="ok">[ DEV_MODE ]</span>
+  javascript / typescript ▓▓▓▓▓▓▓▓▓░ 92
+  php / backend           ▓▓▓▓▓▓▓▓░░ 85
+  html / css              ▓▓▓▓▓▓▓▓▓░ 90
+  node / apis             ▓▓▓▓▓▓▓▓░░ 80
+  sql / databases         ▓▓▓▓▓▓▓▓░░ 82
+
+<span class="amber">[ SEC_MODE ] (en entrenamiento)</span>
+  pentesting web          ▓▓▓▓▓▓░░░░ 60
+  owasp top 10            ▓▓▓▓▓▓▓░░░ 70
+  network recon           ▓▓▓▓▓░░░░░ 55
+  linux / bash            ▓▓▓▓▓▓▓░░░ 70
+  ctf / labs              ▓▓▓▓▓▓░░░░ 60`,
+    stack: () => commands.skills(),
+    'ls /ops': () => `<span class="ok">drwxr-xr-x  6 mrc mrc  ops/</span>
+  op_001/  <span class="dim">desktop_saas</span>           [ACTIVE]
+  op_002/  <span class="dim">web_platforms</span>          [CLASSIFIED]
+  op_003/  <span class="dim">sec_training</span>           [IN_PROGRESS]
+  op_004/  <span class="dim">automation_bots</span>        [DEPLOYED]
+  op_005/  <span class="dim">3d_interfaces</span>          [DEPLOYED]
+  op_006/  <span class="dim">??_encrypted_??</span>        [LOADING]
+hint: <span class="cyan">cat /ops/3</span> para más info`,
+    contact: () => `<span class="ok">channels open:</span>
+  linkedin → /in/mario-rodriguez-carbonero
+  github   → /mario-r-c
+  email    → hola@mrc.dev
+  status   → <span class="ok">accepting new ops</span>`,
+    social: () => commands.contact(),
+    date: () => new Date().toString(),
+    about: () => `<span class="cyan">MRC.shell v2.6</span>
+  un portfolio interactivo construido en una sola página html
+  · vanilla js + three.js + gsap
+  · 0 frameworks, 0 dependencies en server
+  · single-file, deploy directo en github pages
+  el código está abierto en /github
+
+  source: <span class="cyan">github.com/mario-r-c</span>`,
+    hack: () => {
+      const steps = [
+        '<span class="dim">> initializing breach sequence...</span>',
+        '<span class="dim">> scanning ports......... [22, 80, 443, 3306]</span>',
+        '<span class="dim">> bypassing WAF........... <span class="ok">[OK]</span></span>',
+        '<span class="dim">> cracking authentication.. <span class="ok">[OK]</span></span>',
+        '<span class="dim">> elevating privileges..... <span class="amber">[3/3]</span></span>',
+        '<span class="dim">> deploying payload........ <span class="ok">[OK]</span></span>',
+        '<span class="ok">> ACCESS GRANTED. (sólo era una simulación, tranquilo)</span>'
+      ];
+      let i = 0;
+      const tick = () => {
+        if (i >= steps.length) return;
+        append(steps[i]);
+        i++;
+        setTimeout(tick, 350);
+      };
+      tick();
+      return null;
+    },
+    matrix: () => {
+      let count = 0;
+      const tick = () => {
+        if (count >= 8) {
+          append('<span class="ok">> wake up, neo.</span>');
+          return;
+        }
+        const line = Array(60).fill(0).map(() => Math.random() > 0.5 ? '1' : '0').join('');
+        append(`<span class="dim">${line}</span>`);
+        count++;
+        setTimeout(tick, 80);
+      };
+      tick();
+      return null;
+    },
+    sudo: () => `<span class="err">[sudo] password for guest:</span>
+  <span class="dim">............</span>
+  <span class="err">guest is not in the sudoers file. This incident will be reported.</span>
+  <span class="dim">(es broma. esta web no reporta nada a nadie)</span>`,
+    clear: () => { body.innerHTML = ''; return null; }
+  };
+
+  function execute(cmd) {
+    cmd = cmd.trim();
+    if (!cmd) return;
+    history.push(cmd);
+    histIdx = history.length;
+
+    append(`<span class="prompt">guest@mrc:~$</span> ${cmd}`);
+
+    // Special parser for cat /ops/N
+    const catMatch = cmd.match(/^cat\s+\/ops\/(\d)$/i);
+    if (catMatch) {
+      const n = parseInt(catMatch[1]);
+      const ops = {
+        1: '<span class="ok">OP_001 // DESKTOP_SAAS</span>\n  type: saas + electron desktop\n  stack: electron · php · sqlite · js\n  status: ACTIVE · clients in production',
+        2: '<span class="ok">OP_002 // WEB_PLATFORMS</span>\n  type: full-stack web apps\n  stack: js · html/css · node · sql\n  status: CLASSIFIED · varies by client',
+        3: '<span class="ok">OP_003 // SEC_TRAINING</span>\n  type: pentesting practice\n  stack: nmap · burp · linux · python\n  status: IN_PROGRESS · daily',
+        4: '<span class="ok">OP_004 // AUTOMATION_BOTS</span>\n  type: scrapers + integrations\n  stack: python · playwright · node\n  status: DEPLOYED',
+        5: '<span class="ok">OP_005 // 3D_INTERFACES</span>\n  type: frontend animation + webgl\n  stack: three.js · gsap · canvas\n  status: DEPLOYED · including this site',
+        6: '<span class="amber">OP_006 // [ENCRYPTED]</span>\n  status: LOADING\n  could be yours →  contact'
+      };
+      append(ops[n] || '<span class="err">file not found</span>');
+      return;
+    }
+
+    // echo
+    if (cmd.toLowerCase().startsWith('echo ')) {
+      append(cmd.slice(5));
+      return;
+    }
+
+    const fn = commands[cmd.toLowerCase()];
+    if (fn) {
+      const out = fn();
+      if (out !== null && out !== undefined) append(out);
+    } else {
+      append(`<span class="err">command not found: ${cmd}</span> · prueba <span class="cyan">help</span>`);
+    }
+  }
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      execute(input.value);
+      input.value = '';
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (histIdx > 0) {
+        histIdx--;
+        input.value = history[histIdx] || '';
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (histIdx < history.length - 1) {
+        histIdx++;
+        input.value = history[histIdx] || '';
+      } else {
+        histIdx = history.length;
+        input.value = '';
+      }
+    }
+  });
+
+  // Click anywhere on terminal to focus
+  document.querySelector('.live-terminal').addEventListener('click', () => input.focus());
+})();
+
+/* ============================================
+   SMOOTH SCROLL
+   ============================================ */
+document.querySelectorAll('.nav-links a').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+/* ============================================
+   KONAMI EASTER EGG — RAINBOW BREACH
+   ============================================ */
+(function() {
+  const code = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+  let pos = 0;
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === code[pos]) {
+      pos++;
+      if (pos === code.length) {
+        document.body.style.animation = 'kbreach 1.5s ease-in-out';
+        setTimeout(() => {
+          document.body.style.animation = '';
+          alert('☠ ROOT ACCESS GRANTED\n> SISTEMA DESCLASIFICADO\n— M.R.C.');
+        }, 1500);
+        pos = 0;
+      }
+    } else { pos = 0; }
+  });
+  const s = document.createElement('style');
+  s.textContent = '@keyframes kbreach { 0%,100%{filter:none} 25%{filter:hue-rotate(120deg) invert(1)} 50%{filter:hue-rotate(240deg)} 75%{filter:invert(1)} }';
+  document.head.appendChild(s);
+})();
+
+/* ============================================
+   FLIP + CIPHER BOT + THEME SYSTEM
+   ============================================ */
+(function() {
+  // ---------- THEMES (9 palettes) ----------
+  const themes = {
+    matrix: {
+      vars: {
+        '--bg': '#050608', '--bg-deep': '#000000', '--surface': '#0a0d12', '--surface-hi': '#131820',
+        '--green': '#00ff41', '--green-bright': '#14ff72', '--green-dim': '#00802a', '--green-faint': 'rgba(0, 255, 65, 0.15)',
+        '--cyan': '#00f0ff', '--cyan-dim': '#007a85',
+        '--amber': '#ff9500', '--amber-bright': '#ffb340',
+        '--red': '#ff003c', '--red-bright': '#ff2d5e',
+        '--text': '#d8e0e6', '--text-dim': '#6a7280', '--text-faint': '#3a4048'
+      },
+      matrixDim: '#00ff41', matrixBright: '#a8ffba', network: 0x00ff41,
+      msg: 'matrix mode. ya estabas en casa.'
+    },
+    cyberpunk: {
+      vars: {
+        '--bg': '#0d0418', '--bg-deep': '#050010', '--surface': '#15082a', '--surface-hi': '#1d0d3a',
+        '--green': '#ff00ff', '--green-bright': '#ff66ff', '--green-dim': '#660066', '--green-faint': 'rgba(255, 0, 255, 0.18)',
+        '--cyan': '#00f0ff', '--cyan-dim': '#0088aa',
+        '--amber': '#fffc00', '--amber-bright': '#ffff66',
+        '--red': '#ff0080', '--red-bright': '#ff4099',
+        '--text': '#f0d8ff', '--text-dim': '#a080c0', '--text-faint': '#503070'
+      },
+      matrixDim: '#ff00ff', matrixBright: '#ff99ff', network: 0xff00ff,
+      msg: 'cyberpunk activado. 2077 vibes.'
+    },
+    fuego: {
+      vars: {
+        '--bg': '#0e0400', '--bg-deep': '#000', '--surface': '#1a0700', '--surface-hi': '#2a0d00',
+        '--green': '#ff4500', '--green-bright': '#ff7e3a', '--green-dim': '#7a2200', '--green-faint': 'rgba(255, 69, 0, 0.2)',
+        '--cyan': '#ffaa00', '--cyan-dim': '#7a5000',
+        '--amber': '#ffff00', '--amber-bright': '#ffff66',
+        '--red': '#ff0000', '--red-bright': '#ff3333',
+        '--text': '#ffe0d0', '--text-dim': '#a87060', '--text-faint': '#604030'
+      },
+      matrixDim: '#ff4500', matrixBright: '#ffa066', network: 0xff4500,
+      msg: 'modo incendio. cuidado, quema.'
+    },
+    ocean: {
+      vars: {
+        '--bg': '#02080e', '--bg-deep': '#000408', '--surface': '#061218', '--surface-hi': '#0a1c28',
+        '--green': '#00d4ff', '--green-bright': '#66e8ff', '--green-dim': '#0a4a5c', '--green-faint': 'rgba(0, 212, 255, 0.18)',
+        '--cyan': '#00ffea', '--cyan-dim': '#007a70',
+        '--amber': '#0099cc', '--amber-bright': '#33b3dd',
+        '--red': '#ff4080', '--red-bright': '#ff66a0',
+        '--text': '#d0f0ff', '--text-dim': '#608090', '--text-faint': '#304050'
+      },
+      matrixDim: '#00d4ff', matrixBright: '#a0eeff', network: 0x00d4ff,
+      msg: 'modo oceano. respira hondo.'
+    },
+    oro: {
+      vars: {
+        '--bg': '#0a0700', '--bg-deep': '#000', '--surface': '#180f00', '--surface-hi': '#251800',
+        '--green': '#ffd700', '--green-bright': '#ffec80', '--green-dim': '#7a6500', '--green-faint': 'rgba(255, 215, 0, 0.2)',
+        '--cyan': '#ffe680', '--cyan-dim': '#7a6840',
+        '--amber': '#ff8800', '--amber-bright': '#ffaa44',
+        '--red': '#cc0033', '--red-bright': '#ff3366',
+        '--text': '#fff5cc', '--text-dim': '#a89060', '--text-faint': '#605030'
+      },
+      matrixDim: '#ffd700', matrixBright: '#fff099', network: 0xffd700,
+      msg: 'oro. ahora todo brilla.'
+    },
+    rosa: {
+      vars: {
+        '--bg': '#100515', '--bg-deep': '#06000a', '--surface': '#1d0a25', '--surface-hi': '#2a1238',
+        '--green': '#ff66cc', '--green-bright': '#ff99dd', '--green-dim': '#7a3360', '--green-faint': 'rgba(255, 102, 204, 0.2)',
+        '--cyan': '#80ffea', '--cyan-dim': '#408070',
+        '--amber': '#ff80aa', '--amber-bright': '#ffaacc',
+        '--red': '#ff0080', '--red-bright': '#ff4099',
+        '--text': '#ffd0ee', '--text-dim': '#a070a0', '--text-faint': '#604060'
+      },
+      matrixDim: '#ff66cc', matrixBright: '#ffb3e0', network: 0xff66cc,
+      msg: 'rosa. vaporwave on.'
+    },
+    sangre: {
+      vars: {
+        '--bg': '#0a0000', '--bg-deep': '#000', '--surface': '#180000', '--surface-hi': '#240500',
+        '--green': '#ff0033', '--green-bright': '#ff5577', '--green-dim': '#660014', '--green-faint': 'rgba(255, 0, 51, 0.22)',
+        '--cyan': '#aa0022', '--cyan-dim': '#550011',
+        '--amber': '#ff5566', '--amber-bright': '#ff8899',
+        '--red': '#ff0000', '--red-bright': '#ff4444',
+        '--text': '#ffd0d8', '--text-dim': '#aa6070', '--text-faint': '#603040'
+      },
+      matrixDim: '#ff0033', matrixBright: '#ff8899', network: 0xff0033,
+      msg: 'sangre. denso. respira.'
+    },
+    naranja: {
+      vars: {
+        '--bg': '#0a0500', '--bg-deep': '#000', '--surface': '#1a0d00', '--surface-hi': '#251400',
+        '--green': '#ff7700', '--green-bright': '#ffaa44', '--green-dim': '#663300', '--green-faint': 'rgba(255, 119, 0, 0.2)',
+        '--cyan': '#ffaa00', '--cyan-dim': '#7a5000',
+        '--amber': '#ff5500', '--amber-bright': '#ff8833',
+        '--red': '#ff0033', '--red-bright': '#ff3366',
+        '--text': '#ffe0c0', '--text-dim': '#a07050', '--text-faint': '#604030'
+      },
+      matrixDim: '#ff7700', matrixBright: '#ffbb77', network: 0xff7700,
+      msg: 'naranja. halloween mood.'
+    },
+    blanco: {
+      vars: {
+        '--bg': '#fafafa', '--bg-deep': '#ffffff', '--surface': '#f0f0f0', '--surface-hi': '#e8e8e8',
+        '--green': '#0a0a0a', '--green-bright': '#222', '--green-dim': '#aaaaaa', '--green-faint': 'rgba(0, 0, 0, 0.08)',
+        '--cyan': '#0066cc', '--cyan-dim': '#003366',
+        '--amber': '#cc6600', '--amber-bright': '#dd8833',
+        '--red': '#cc0000', '--red-bright': '#ee2222',
+        '--text': '#0a0a0a', '--text-dim': '#666666', '--text-faint': '#aaaaaa'
+      },
+      matrixDim: '#444444', matrixBright: '#000000', network: 0x000000,
+      msg: 'minimal. zen mode. ojos descansados.'
+    }
+  };
+
+  const aliases = {
+    'matrix': 'matrix', 'verde': 'matrix', 'green': 'matrix', 'default': 'matrix', 'original': 'matrix', 'reset': 'matrix', 'hacker': 'matrix', 'normal': 'matrix',
+    'cyberpunk': 'cyberpunk', 'cyber': 'cyberpunk', 'synthwave': 'cyberpunk', 'morado': 'cyberpunk', 'purple': 'cyberpunk', 'magenta': 'cyberpunk', 'neon': 'cyberpunk', '2077': 'cyberpunk', 'violeta': 'cyberpunk',
+    'fuego': 'fuego', 'fire': 'fuego', 'rojo': 'fuego', 'red': 'fuego', 'inferno': 'fuego', 'lava': 'fuego', 'ardiente': 'fuego',
+    'ocean': 'ocean', 'oceano': 'ocean', 'azul': 'ocean', 'blue': 'ocean', 'agua': 'ocean', 'ice': 'ocean', 'hielo': 'ocean', 'mar': 'ocean', 'water': 'ocean',
+    'oro': 'oro', 'gold': 'oro', 'amarillo': 'oro', 'yellow': 'oro', 'lujo': 'oro', 'dorado': 'oro',
+    'rosa': 'rosa', 'pink': 'rosa', 'vaporwave': 'rosa', 'kawaii': 'rosa',
+    'sangre': 'sangre', 'blood': 'sangre', 'sangriento': 'sangre',
+    'naranja': 'naranja', 'orange': 'naranja', 'halloween': 'naranja',
+    'blanco': 'blanco', 'minimal': 'blanco', 'minimalista': 'blanco', 'limpio': 'blanco', 'white': 'blanco', 'clean': 'blanco', 'zen': 'blanco', 'claro': 'blanco', 'light': 'blanco'
+  };
+
+  function detectTheme(input) {
+    const lower = input.toLowerCase().trim();
+    if (aliases[lower]) return aliases[lower];
+    for (const [key, val] of Object.entries(aliases)) {
+      if (lower.includes(key)) return val;
+    }
+    return null;
+  }
+
+  function applyTheme(themeName) {
+    const t = themes[themeName];
+    if (!t) return false;
+    Object.entries(t.vars).forEach(([k, v]) => {
+      document.documentElement.style.setProperty(k, v);
+    });
+    window.__themeColors = { matrixDim: t.matrixDim, matrixBright: t.matrixBright };
+    if (window.__network && typeof THREE !== 'undefined') {
+      const c = new THREE.Color(t.network);
+      if (window.__network.lineMat) window.__network.lineMat.color.copy(c);
+      if (window.__network.nodes) {
+        window.__network.nodes.forEach(n => { if (n.material) n.material.color.copy(c); });
+      }
+    }
+    return true;
+  }
+
+  // ---------- FLIP LOGIC ----------
+  const flipBtn = document.getElementById('flip-switch');
+  const lblFront = document.getElementById('lbl-front');
+  const lblBack = document.getElementById('lbl-back');
+  let isFlipped = false;
+  let isAnimating = false;
+  let cipherInitiated = false;
+
+  function flip() {
+    if (isAnimating) return;
+    isAnimating = true;
+    document.body.classList.add('flipping');
+
+    setTimeout(() => {
+      isFlipped = !isFlipped;
+      document.body.classList.toggle('flipped', isFlipped);
+      lblFront.classList.toggle('active', !isFlipped);
+      lblBack.classList.toggle('active', isFlipped);
+      document.body.classList.remove('flipping');
+      isAnimating = false;
+
+      if (isFlipped) {
+        startCipherUptime();
+        if (!cipherInitiated) {
+          cipherInitiated = true;
+          setTimeout(initCipher, 800);
+        } else {
+          setTimeout(() => chatInput.focus(), 400);
+        }
+      }
+    }, 500);
+  }
+  flipBtn.addEventListener('click', flip);
+
+  // ---------- CIPHER UPTIME ----------
+  let cipherStart = null;
+  function startCipherUptime() {
+    if (cipherStart) return;
+    cipherStart = Date.now();
+    const el = document.getElementById('cipher-uptime');
+    if (!el) return;
+    setInterval(() => {
+      if (!cipherStart) return;
+      const s = Math.floor((Date.now() - cipherStart) / 1000);
+      const m = Math.floor(s / 60);
+      el.textContent = String(m).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+    }, 1000);
+  }
+
+  // ---------- BOT (CIPHER) ----------
+  const messagesEl = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+  const chatSend = document.getElementById('chat-send');
+  const cipherState = document.getElementById('cipher-state');
+
+  function setCipherState(text) { if (cipherState) cipherState.textContent = text; }
+
+  function addMsg(who, text, type) {
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + (type || 'bot');
+    div.innerHTML = '<span class="who">' + who + '</span><span class="txt">' + text + '</span>';
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    return div;
+  }
+
+  function botSay(text, delay) {
+    delay = delay || 0;
+    return new Promise(function(resolve) {
+      setCipherState('TYPING...');
+      const typingDiv = addMsg('CIPHER', '<span class="typing-dots"></span>', 'bot');
+      setTimeout(function() {
+        typingDiv.remove();
+        addMsg('CIPHER', text, 'bot');
+        setCipherState('WAITING_INPUT');
+        resolve();
+      }, delay + 700);
+    });
+  }
+
+  function userSaid(text) { addMsg('YOU', text, 'user'); }
+  function systemSay(text) { addMsg('SYS', text, 'system'); }
+
+  async function initCipher() {
+    await botSay('...', 200);
+    await botSay('ah. otro intruso curioso.', 600);
+    await botSay('soy <span style="color:var(--green-bright);font-weight:700">CIPHER</span>. vivo aquí abajo, en el reverso.', 800);
+    await botSay('¿quieres ver la fachada con otra cara?', 700);
+    await botSay('dime un <span style="color:var(--cyan)">tema</span> y la pinto. o pulsa los chips de abajo.', 800);
+    chatInput.focus();
+  }
+
+  function processInput(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    userSaid(trimmed);
+    const lower = trimmed.toLowerCase();
+
+    if (/^(hola|hi|hey|buenas|hello|holi|wenas)/.test(lower)) { botSay('hola.', 300); return; }
+    if (/^(help|ayuda|temas|themes|opciones|comandos)/.test(lower)) {
+      botSay('temas: <span style="color:var(--cyan)">matrix · cyberpunk · fuego · oceano · oro · rosa · sangre · naranja · blanco</span>. también vale "reset".', 400);
+      return;
+    }
+    if (/(quien eres|who are you|tu nombre|tu eres|que eres)/.test(lower)) {
+      botSay('un fragmento del reverso. nada más, nada menos. soy CIPHER.', 500); return;
+    }
+    if (/(adios|bye|chao|hasta|nos vemos|see you|chau)/.test(lower)) {
+      botSay('volveré cuando hagas flip. siempre estoy aquí.', 400); return;
+    }
+    if (/(te quiero|love you|amor|te amo)/.test(lower)) {
+      botSay('demasiada información para un primer encuentro.', 500); return;
+    }
+    if (/(matar|kill|destruir|destroy)/.test(lower)) {
+      botSay('soy pacifista digital. solo cambio colores.', 400); return;
+    }
+    if (/(hack)/.test(lower)) { botSay('ya estás en uno. mira a tu alrededor.', 400); return; }
+    if (/(donde estoy|where am i|que es esto)/.test(lower)) {
+      botSay('estás en el reverso del portfolio de mario. una pequeña habitación trasera.', 500); return;
+    }
+    if (/(mario|m\.r\.c|el dueño|owner)/.test(lower)) {
+      botSay('mario está al otro lado. yo solo soy su sombra.', 500); return;
+    }
+
+    const theme = detectTheme(trimmed);
+    if (theme) {
+      const success = applyTheme(theme);
+      if (success) {
+        botSay(themes[theme].msg, 350);
+        if (theme === 'matrix') systemSay('// theme reset to default · original restaurado');
+        else systemSay('// theme applied: ' + theme + ' · efímero');
+      } else { botSay('algo se rompió por dentro.', 300); }
+      return;
+    }
+
+    const fallbacks = [
+      'no reconozco eso. escribe <span style="color:var(--cyan)">help</span>.',
+      'eso no está en mi paleta.',
+      'vocabulario limitado por aquí abajo.',
+      '¿perdón? prueba con un color o "help".',
+      'no te sigo. dame un tema.'
+    ];
+    botSay(fallbacks[Math.floor(Math.random() * fallbacks.length)], 400);
+  }
+
+  function send() {
+    const txt = chatInput.value;
+    if (!txt.trim()) return;
+    chatInput.value = '';
+    processInput(txt);
+  }
+
+  chatInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); send(); }
+  });
+  chatSend.addEventListener('click', send);
+
+  // ---------- THEME QUICK CHIPS ----------
+  document.querySelectorAll('.theme-chip').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const themeKey = btn.dataset.theme;
+      const targetTheme = themeKey === 'reset' ? 'matrix' : (aliases[themeKey] || themeKey);
+      const success = applyTheme(targetTheme);
+      if (success) {
+        userSaid(themeKey === 'reset' ? 'reset' : themeKey);
+        botSay(themes[targetTheme].msg, 250);
+        if (targetTheme === 'matrix') systemSay('// theme reset to default');
+        else systemSay('// theme applied: ' + targetTheme);
+      }
+    });
+  });
+
+  // ---------- ATTACH HOVER CURSOR TO NEW ELEMENTS ----------
+  const newHoverables = document.querySelectorAll('#flip-switch, .flip-label, .chat-send, .theme-chip, #chat-input');
+  newHoverables.forEach(function(el) {
+    el.addEventListener('mouseenter', function() {
+      const c = document.querySelector('.cursor');
+      if (c) c.classList.add('hover');
+    });
+    el.addEventListener('mouseleave', function() {
+      const c = document.querySelector('.cursor');
+      if (c) c.classList.remove('hover');
+    });
+  });
+
+  document.querySelector('.chat-panel').addEventListener('click', function(e) {
+    if (!e.target.matches('button, input, a')) chatInput.focus();
+  });
+})();
+</script>
+</body>
+</html>
