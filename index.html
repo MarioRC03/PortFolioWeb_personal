@@ -2246,6 +2246,42 @@ body.flipped .nav {
     <article class="op-card reveal">
       <div class="op-header">
         <span class="op-id">// OP_002</span>
+        <span class="op-status">DEPLOYED</span>
+      </div>
+      <div class="op-body">
+        <div class="op-type">WEB · CONGRESO CIENTÍFICO</div>
+        <h3 class="op-codename">IOVC <span class="accent">2027</span></h3>
+        <p class="op-desc">Web oficial del 17th International Oncolytic Virotherapy Conference (Salamanca, abril 2027). Bilingüe ES/EN, con programa por días, ponentes, tarifas de inscripción, sede con mapa y patrocinadores. Inscripción y envío de abstracts enlazados al portal externo del congreso.</p>
+        <div class="op-tech">
+          <span>Astro</span><span>i18n ES/EN</span><span>SEO / OG</span><span>Cloudflare Pages</span>
+        </div>
+        <div class="op-links">
+          <a class="op-btn primary" href="https://iovc-2026.pages.dev/" target="_blank" rel="noopener noreferrer">&#9654;&nbsp; Ver web</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="op-card reveal">
+      <div class="op-header">
+        <span class="op-id">// OP_003</span>
+        <span class="op-status">DEPLOYED</span>
+      </div>
+      <div class="op-body">
+        <div class="op-type">WEB · UNIVERSIDAD</div>
+        <h3 class="op-codename">Máster <span class="accent">BBAA</span></h3>
+        <p class="op-desc">Web del Máster en Estudios Avanzados en Producción y Prácticas Artísticas de la Facultad de Bellas Artes (Universidad de Salamanca). Single-page app de estética oscura, pensada primero para móvil y desplegada en el edge.</p>
+        <div class="op-tech">
+          <span>SPA</span><span>JavaScript</span><span>Responsive</span><span>Cloudflare Pages</span>
+        </div>
+        <div class="op-links">
+          <a class="op-btn primary" href="https://master-bellas-artes.pages.dev/" target="_blank" rel="noopener noreferrer">&#9654;&nbsp; Ver web</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="op-card reveal">
+      <div class="op-header">
+        <span class="op-id">// OP_004</span>
         <span class="op-status">ACTIVE</span>
       </div>
       <div class="op-body">
@@ -2263,7 +2299,7 @@ body.flipped .nav {
 
     <article class="op-card reveal">
       <div class="op-header">
-        <span class="op-id">// OP_003</span>
+        <span class="op-id">// OP_005</span>
         <span class="op-status">ACTIVE</span>
       </div>
       <div class="op-body">
@@ -2278,7 +2314,7 @@ body.flipped .nav {
 
     <article class="op-card reveal">
       <div class="op-header">
-        <span class="op-id">// OP_004</span>
+        <span class="op-id">// OP_006</span>
         <span class="op-status amber">CLASSIFIED</span>
       </div>
       <div class="op-body">
@@ -2293,7 +2329,7 @@ body.flipped .nav {
 
     <article class="op-card reveal">
       <div class="op-header">
-        <span class="op-id">// OP_005</span>
+        <span class="op-id">// OP_007</span>
         <span class="op-status amber">IN_PROGRESS</span>
       </div>
       <div class="op-body">
@@ -2308,7 +2344,7 @@ body.flipped .nav {
 
     <article class="op-card reveal">
       <div class="op-header">
-        <span class="op-id">// OP_006</span>
+        <span class="op-id">// OP_008</span>
         <span class="op-status">DEPLOYED</span>
       </div>
       <div class="op-body">
@@ -2323,7 +2359,7 @@ body.flipped .nav {
 
     <article class="op-card reveal">
       <div class="op-header">
-        <span class="op-id">// OP_007</span>
+        <span class="op-id">// OP_009</span>
         <span class="op-status">DEPLOYED</span>
       </div>
       <div class="op-body">
@@ -2338,7 +2374,7 @@ body.flipped .nav {
 
     <article class="op-card reveal">
       <div class="op-header">
-        <span class="op-id">// OP_008</span>
+        <span class="op-id">// OP_010</span>
         <span class="op-status dim">LOADING...</span>
       </div>
       <div class="op-body">
@@ -2949,7 +2985,7 @@ body.flipped .nav {
   <span class="cyan">skills</span>    — lista capacidades dev + sec
   <span class="cyan">stack</span>     — alias de skills
   <span class="cyan">ls /ops</span>   — lista operaciones
-  <span class="cyan">cat /ops/N</span>— detalle de operación N (1-8)
+  <span class="cyan">cat /ops/N</span>— detalle de operación N (1-10)
   <span class="cyan">contact</span>   — canales de comunicación
   <span class="cyan">social</span>    — alias de contact
   <span class="cyan">date</span>      — timestamp actual
@@ -2979,15 +3015,17 @@ body.flipped .nav {
   linux / bash            ▓▓▓▓▓▓▓░░░ 70
   ctf / labs              ▓▓▓▓▓▓░░░░ 60`,
     stack: () => commands.skills(),
-    'ls /ops': () => `<span class="ok">drwxr-xr-x  8 mrc mrc  ops/</span>
+    'ls /ops': () => `<span class="ok">drwxr-xr-x 10 mrc mrc  ops/</span>
   op_001/  <span class="dim">jondasiviz</span>             [DEPLOYED]
-  op_002/  <span class="dim">ghost_core</span>             [ACTIVE]
-  op_003/  <span class="dim">desktop_saas</span>           [ACTIVE]
-  op_004/  <span class="dim">web_platforms</span>          [CLASSIFIED]
-  op_005/  <span class="dim">sec_training</span>           [IN_PROGRESS]
-  op_006/  <span class="dim">automation_bots</span>        [DEPLOYED]
-  op_007/  <span class="dim">3d_interfaces</span>          [DEPLOYED]
-  op_008/  <span class="dim">??_encrypted_??</span>        [LOADING]
+  op_002/  <span class="dim">iovc_2027</span>              [DEPLOYED]
+  op_003/  <span class="dim">master_bbaa_usal</span>       [DEPLOYED]
+  op_004/  <span class="dim">ghost_core</span>             [ACTIVE]
+  op_005/  <span class="dim">desktop_saas</span>           [ACTIVE]
+  op_006/  <span class="dim">web_platforms</span>          [CLASSIFIED]
+  op_007/  <span class="dim">sec_training</span>           [IN_PROGRESS]
+  op_008/  <span class="dim">automation_bots</span>        [DEPLOYED]
+  op_009/  <span class="dim">3d_interfaces</span>          [DEPLOYED]
+  op_010/  <span class="dim">??_encrypted_??</span>        [LOADING]
 hint: <span class="cyan">cat /ops/1</span> para más info`,
     contact: () => `<span class="ok">channels open:</span>
   linkedin → /in/mario-rodriguez-carbonero
@@ -3055,18 +3093,20 @@ hint: <span class="cyan">cat /ops/1</span> para más info`,
     append(`<span class="prompt">guest@mrc:~$</span> ${cmd}`);
 
     // Special parser for cat /ops/N
-    const catMatch = cmd.match(/^cat\s+\/ops\/(\d)$/i);
+    const catMatch = cmd.match(/^cat\s+\/ops\/(\d+)$/i);
     if (catMatch) {
       const n = parseInt(catMatch[1]);
       const ops = {
         1: '<span class="ok">OP_001 // JONDASIVIZ</span>\n  type: planificador de builds volkswagen\n  stack: typescript · react · vite · tauri · three.js\n  status: DEPLOYED · proyecto de equipo\n  live:  planificador-volkswagen.onrender.com\n  code:  github.com/JondaSivizVolkswagen/jondasiviz',
-        2: '<span class="ok">OP_002 // GHOST_CORE</span>\n  type: auditoría de seguridad pasiva + matriz grc\n  stack: php 8 · docker · js · osint\n  status: ACTIVE · iso 27001 / nist / owasp / rgpd → soa\n  code:  github.com/MarioRC03/GHOST_SOVEREIGN_CORE',
-        3: '<span class="ok">OP_003 // DESKTOP_SAAS</span>\n  type: saas + electron desktop\n  stack: electron · php · sqlite · js\n  status: ACTIVE · clients in production',
-        4: '<span class="ok">OP_004 // WEB_PLATFORMS</span>\n  type: full-stack web apps\n  stack: js · html/css · node · sql\n  status: CLASSIFIED · varies by client',
-        5: '<span class="ok">OP_005 // SEC_TRAINING</span>\n  type: pentesting practice\n  stack: nmap · burp · linux · python\n  status: IN_PROGRESS · daily',
-        6: '<span class="ok">OP_006 // AUTOMATION_BOTS</span>\n  type: scrapers + integrations\n  stack: python · playwright · node\n  status: DEPLOYED',
-        7: '<span class="ok">OP_007 // 3D_INTERFACES</span>\n  type: frontend animation + webgl\n  stack: three.js · gsap · canvas\n  status: DEPLOYED · including this site',
-        8: '<span class="amber">OP_008 // [ENCRYPTED]</span>\n  status: LOADING\n  could be yours →  contact'
+        2: '<span class="ok">OP_002 // IOVC_2027</span>\n  type: web oficial de congreso científico internacional\n  stack: astro · i18n es/en · seo/og · cloudflare pages\n  status: DEPLOYED · programa, ponentes, inscripción, sede\n  live:  iovc-2026.pages.dev',
+        3: '<span class="ok">OP_003 // MASTER_BBAA_USAL</span>\n  type: web de máster · facultad de bellas artes (usal)\n  stack: spa · javascript · responsive · cloudflare pages\n  status: DEPLOYED\n  live:  master-bellas-artes.pages.dev',
+        4: '<span class="ok">OP_004 // GHOST_CORE</span>\n  type: auditoría de seguridad pasiva + matriz grc\n  stack: php 8 · docker · js · osint\n  status: ACTIVE · iso 27001 / nist / owasp / rgpd → soa\n  code:  github.com/MarioRC03/GHOST_SOVEREIGN_CORE',
+        5: '<span class="ok">OP_005 // DESKTOP_SAAS</span>\n  type: saas + electron desktop\n  stack: electron · php · sqlite · js\n  status: ACTIVE · clients in production',
+        6: '<span class="ok">OP_006 // WEB_PLATFORMS</span>\n  type: full-stack web apps\n  stack: js · html/css · node · sql\n  status: CLASSIFIED · varies by client',
+        7: '<span class="ok">OP_007 // SEC_TRAINING</span>\n  type: pentesting practice\n  stack: nmap · burp · linux · python\n  status: IN_PROGRESS · daily',
+        8: '<span class="ok">OP_008 // AUTOMATION_BOTS</span>\n  type: scrapers + integrations\n  stack: python · playwright · node\n  status: DEPLOYED',
+        9: '<span class="ok">OP_009 // 3D_INTERFACES</span>\n  type: frontend animation + webgl\n  stack: three.js · gsap · canvas\n  status: DEPLOYED · including this site',
+        10: '<span class="amber">OP_010 // [ENCRYPTED]</span>\n  status: LOADING\n  could be yours →  contact'
       };
       append(ops[n] || '<span class="err">file not found</span>');
       return;
